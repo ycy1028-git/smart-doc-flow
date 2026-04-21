@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SmartDoc-Flow Demo</title>
+  <style>
+    :root {
+      --bg: #0b1020;
+      --panel: rgba(15, 23, 42, 0.82);
+      --panel-border: rgba(148, 163, 184, 0.16);
+      --text: #e5edf7;
+      --muted: #99a8bd;
+      --accent: #7dd3fc;
+      --accent-strong: #38bdf8;
+      --accent-soft: rgba(56, 189, 248, 0.14);
+      --ok: #86efac;
+      --shadow: 0 30px 80px rgba(2, 8, 23, 0.45);
+      --radius: 24px;
+      --code-bg: rgba(2, 6, 23, 0.72);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "SF Pro Display", "PingFang SC", "Helvetica Neue", sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(56, 189, 248, 0.16), transparent 30%),
+        radial-gradient(circle at top right, rgba(167, 139, 250, 0.14), transparent 35%),
+        linear-gradient(180deg, #0b1020 0%, #09111b 100%);
+      color: var(--text);
+    }
+
+    .shell {
+      width: min(1200px, calc(100vw - 32px));
+      margin: 0 auto;
+      padding: 40px 0 56px;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 24px;
+      align-items: stretch;
+      margin-bottom: 24px;
+    }
+
+    .hero-card,
+    .panel,
+    .result-card {
+      position: relative;
+      overflow: hidden;
+      background: var(--panel);
+      backdrop-filter: blur(18px);
+      border: 1px solid var(--panel-border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .hero-card {
+      padding: 36px;
+    }
+
+    .hero-card::before,
+    .panel::before,
+    .result-card::before {
+      content: "";
+      position: absolute;
+      inset: auto -60px -60px auto;
+      width: 180px;
+      height: 180px;
+      border-radius: 999px;
+      background: radial-gradient(circle, rgba(125, 211, 252, 0.18), transparent 70%);
+      pointer-events: none;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--accent);
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      border: 1px solid rgba(125, 211, 252, 0.18);
+    }
+
+    h1 {
+      margin: 20px 0 14px;
+      font-size: clamp(34px, 4vw, 56px);
+      line-height: 0.96;
+      letter-spacing: -0.04em;
+    }
+
+    .hero-copy {
+      margin: 0;
+      max-width: 760px;
+      color: var(--muted);
+      font-size: 16px;
+      line-height: 1.7;
+    }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+      margin-top: 28px;
+    }
+
+    .metric {
+      padding: 16px;
+      border-radius: 18px;
+      background: rgba(15, 23, 42, 0.72);
+      border: 1px solid rgba(148, 163, 184, 0.12);
+    }
+
+    .metric strong {
+      display: block;
+      font-size: 24px;
+      margin-bottom: 6px;
+    }
+
+    .metric span {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .panel {
+      padding: 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .panel h2,
+    .result-card h2 {
+      margin: 0;
+      font-size: 20px;
+      letter-spacing: -0.03em;
+    }
+
+    .panel p,
+    .result-card p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
+    .upload-box {
+      position: relative;
+      padding: 26px;
+      border-radius: 20px;
+      border: 1px dashed rgba(125, 211, 252, 0.34);
+      background: rgba(15, 23, 42, 0.72);
+    }
+
+    .upload-box input {
+      width: 100%;
+      color: var(--muted);
+    }
+
+    .button-row {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      appearance: none;
+      border: 0;
+      border-radius: 16px;
+      padding: 14px 20px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 180ms ease, opacity 180ms ease, background 180ms ease;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: 0.6;
+      transform: none;
+    }
+
+    .primary {
+      background: linear-gradient(135deg, var(--accent-strong), #60a5fa);
+      color: #06101d;
+    }
+
+    .ghost {
+      background: rgba(148, 163, 184, 0.12);
+      color: var(--text);
+      border: 1px solid rgba(148, 163, 184, 0.18);
+    }
+
+    .status {
+      min-height: 24px;
+      font-size: 14px;
+      color: var(--muted);
+    }
+
+    .status.ok {
+      color: var(--ok);
+    }
+
+    .meta {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+
+    .meta-card {
+      padding: 16px;
+      border-radius: 18px;
+      background: rgba(15, 23, 42, 0.72);
+      border: 1px solid rgba(148, 163, 184, 0.12);
+    }
+
+    .meta-card label {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--muted);
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .meta-card strong {
+      font-size: 16px;
+      overflow-wrap: anywhere;
+    }
+
+    .results {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 24px;
+    }
+
+    .result-card {
+      padding: 24px;
+    }
+
+    pre {
+      margin: 16px 0 0;
+      padding: 18px;
+      min-height: 360px;
+      max-height: 560px;
+      overflow: auto;
+      border-radius: 18px;
+      background: var(--code-bg);
+      border: 1px solid rgba(148, 163, 184, 0.12);
+      color: var(--text);
+      font-size: 13px;
+      line-height: 1.7;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    code {
+      font-family: "SF Mono", "JetBrains Mono", monospace;
+    }
+
+    @media (max-width: 980px) {
+      .hero,
+      .results,
+      .meta {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="hero">
+      <div class="hero-card">
+        <span class="eyebrow">SmartDoc-Flow Demo</span>
+        <h1>上传文件，直接看解析后的 Markdown / JSON</h1>
+        <p class="hero-copy">
+          这是开源版的轻量 Demo Web。它直接调用当前解析内核，适合快速验证 PDF、图片或主流文档在“基础支持”范围内的解析效果。
+        </p>
+        <div class="hero-grid">
+          <div class="metric"><strong>OSS</strong><span>基础支持能力演示</span></div>
+          <div class="metric"><strong>PDF</strong><span>优先验证主链路</span></div>
+          <div class="metric"><strong>Markdown</strong><span>快速查看可读输出</span></div>
+          <div class="metric"><strong>JSON</strong><span>查看结构化结果</span></div>
+        </div>
+      </div>
+
+      <aside class="panel">
+        <div>
+          <h2>上传并解析</h2>
+          <p>先上传一个文件，服务会返回文档基础 Profile、Markdown 输出和 JSON 输出。当前最适合验证 PDF 主链路。</p>
+        </div>
+        <div class="upload-box">
+          <input id="fileInput" type="file" />
+        </div>
+        <div class="button-row">
+          <button id="parseButton" class="primary">解析文件</button>
+          <button id="clearButton" class="ghost" type="button">清空结果</button>
+        </div>
+        <div id="status" class="status">等待上传文件。</div>
+      </aside>
+    </section>
+
+    <section class="meta">
+      <article class="meta-card"><label>文件名</label><strong id="metaFileName">-</strong></article>
+      <article class="meta-card"><label>类型</label><strong id="metaSourceType">-</strong></article>
+      <article class="meta-card"><label>特征</label><strong id="metaFlags">-</strong></article>
+    </section>
+
+    <section class="results">
+      <article class="result-card">
+        <h2>Markdown</h2>
+        <p>便于快速查看可读性和结构恢复效果。</p>
+        <pre><code id="markdownOutput">等待解析结果...</code></pre>
+      </article>
+
+      <article class="result-card">
+        <h2>JSON</h2>
+        <p>便于查看结构化输出和后续系统对接。</p>
+        <pre><code id="jsonOutput">等待解析结果...</code></pre>
+      </article>
+    </section>
+  </main>
+
+  <script>
+    const fileInput = document.getElementById('fileInput');
+    const parseButton = document.getElementById('parseButton');
+    const clearButton = document.getElementById('clearButton');
+    const status = document.getElementById('status');
+    const markdownOutput = document.getElementById('markdownOutput');
+    const jsonOutput = document.getElementById('jsonOutput');
+    const metaFileName = document.getElementById('metaFileName');
+    const metaSourceType = document.getElementById('metaSourceType');
+    const metaFlags = document.getElementById('metaFlags');
+
+    function setStatus(message, ok = false) {
+      status.textContent = message;
+      status.className = ok ? 'status ok' : 'status';
+    }
+
+    function clearResult() {
+      metaFileName.textContent = '-';
+      metaSourceType.textContent = '-';
+      metaFlags.textContent = '-';
+      markdownOutput.textContent = '等待解析结果...';
+      jsonOutput.textContent = '等待解析结果...';
+      setStatus('等待上传文件。');
+      fileInput.value = '';
+    }
+
+    async function parseFile() {
+      const file = fileInput.files[0];
+      if (!file) {
+        setStatus('请先选择一个文件。');
+        return;
+      }
+
+      parseButton.disabled = true;
+      setStatus('正在解析，请稍候...');
+
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const response = await fetch('/api/demo/parse', {
+          method: 'POST',
+          body: formData
+        });
+
+        if (!response.ok) {
+          const errorBody = await response.json().catch(() => ({ message: '解析失败' }));
+          throw new Error(errorBody.message || '解析失败');
+        }
+
+        const result = await response.json();
+        metaFileName.textContent = result.fileName;
+        metaSourceType.textContent = result.sourceType;
+        metaFlags.textContent = [
+          result.scanned ? '扫描件' : '数字文档',
+          result.multiColumn ? '双栏' : '非双栏',
+          result.tableHeavy ? '表格密集' : '普通布局',
+          result.imageHeavy ? '图片密集' : '文本为主'
+        ].join(' / ');
+
+        markdownOutput.textContent = result.markdown || '';
+        jsonOutput.textContent = result.json || '';
+        setStatus('解析完成，可以对比 Markdown 和 JSON 输出。', true);
+      } catch (error) {
+        setStatus(error.message || '解析失败，请重试。');
+      } finally {
+        parseButton.disabled = false;
+      }
+    }
+
+    parseButton.addEventListener('click', parseFile);
+    clearButton.addEventListener('click', clearResult);
+  </script>
+</body>
+</html>
