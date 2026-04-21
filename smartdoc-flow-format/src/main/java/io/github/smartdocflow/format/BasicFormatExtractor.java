@@ -4,6 +4,8 @@ import io.github.smartdocflow.common.model.DocumentSourceType;
 import io.github.smartdocflow.core.model.DocumentProfile;
 import io.github.smartdocflow.core.spi.FormatExtractionResult;
 import io.github.smartdocflow.core.spi.FormatExtractor;
+import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -11,6 +13,15 @@ import java.util.List;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
+import org.apache.poi.xslf.usermodel.XMLSlideShow;
+import org.apache.poi.xslf.usermodel.XSLFNotes;
+import org.apache.poi.xslf.usermodel.XSLFPictureShape;
+import org.apache.poi.xslf.usermodel.XSLFShape;
+import org.apache.poi.xslf.usermodel.XSLFSlide;
+import org.apache.poi.xslf.usermodel.XSLFTable;
+import org.apache.poi.xslf.usermodel.XSLFTableCell;
+import org.apache.poi.xslf.usermodel.XSLFTableRow;
+import org.apache.poi.xslf.usermodel.XSLFTextShape;
 
 public final class BasicFormatExtractor implements FormatExtractor {
     @Override
@@ -18,9 +29,38 @@ public final class BasicFormatExtractor implements FormatExtractor {
         if (profile.sourceType() == DocumentSourceType.PDF) {
             return extractPdf(source);
         }
+        if (profile.sourceType() == DocumentSourceType.PPTX) {
+            return extractPptx(source);
+        }
 
         String placeholder = "SmartDoc-Flow skeleton extracted content for " + source.getFileName();
         return new FormatExtractionResult(source, placeholder, List.of(placeholder), List.of(List.of(placeholder)), 1);
+    }
+
+    private FormatExtractionResult extractPptx(Path source) {
+        try (InputStream inputStream = java.nio.file.Files.newInputStream(source); XMLSlideShow slideShow = new XMLSlideShow(inputStream)) {
+            List<String> pageTexts = new ArrayList<>();
+            List<List<String>> pageLines = new ArrayList<>();
+
+            int slideIndex = 1;
+            for (XSLFSlide slide : slideShow.getSlides()) {
+                String slideText = normalize(extractSlideText(slide, slideIndex));
+                pageTexts.add(slideText);
+                pageLines.add(splitLines(slideText));
+                slideIndex++;
+            }
+
+            if (pageTexts.isEmpty()) {
+                String placeholder = "No slides extracted from " + source.getFileName();
+                return new FormatExtractionResult(source, placeholder, List.of(placeholder), List.of(splitLines(placeholder)), 1);
+            }
+
+            String fullText = String.join(System.lineSeparator() + System.lineSeparator(), pageTexts).trim();
+            return new FormatExtractionResult(source, fullText, pageTexts, pageLines, pageTexts.size());
+        } catch (Exception e) {
+            String placeholder = "Failed to extract PPTX content from " + source.getFileName() + ": " + e.getMessage();
+            return new FormatExtractionResult(source, placeholder, List.of(placeholder), List.of(splitLines(placeholder)), 1);
+        }
     }
 
     private FormatExtractionResult extractPdf(Path source) {
@@ -58,5 +98,83 @@ public final class BasicFormatExtractor implements FormatExtractor {
             return "";
         }
         return text.replace("\r\n", "\n").trim();
+    }
+
+    private String extractSlideText(XSLFSlide slide, int slideIndex) throws IOException {
+        List<String> sections = new ArrayList<>();
+        sections.add("Slide " + slideIndex);
+
+        String title = normalize(slide.getTitle());
+        if (!title.isBlank()) {
+            sections.add(title);
+        }
+
+        for (XSLFShape shape : slide.getShapes()) {
+            if (shape instanceof XSLFTextShape textShape) {
+                String text = normalize(textShape.getText());
+                if (!text.isBlank() && !text.equals(title)) {
+                    sections.add(text);
+                }
+                continue;
+            }
+            if (shape instanceof XSLFTable table) {
+                String tableText = normalize(extractTableText(table));
+                if (!tableText.isBlank()) {
+                    sections.add(tableText);
+                }
+                continue;
+            }
+            if (shape instanceof XSLFPictureShape pictureShape) {
+                String pictureText = normalize(extractPictureText(pictureShape));
+                if (!pictureText.isBlank()) {
+                    sections.add(pictureText);
+                }
+            }
+        }
+
+        String notesText = normalize(extractNotesText(slide.getNotes()));
+        if (!notesText.isBlank()) {
+            sections.add("Notes");
+            sections.add(notesText);
+        }
+
+        return String.join(System.lineSeparator(), sections).trim();
+    }
+
+    private String extractTableText(XSLFTable table) {
+        List<String> rows = new ArrayList<>();
+        for (XSLFTableRow row : table.getRows()) {
+            List<String> cells = new ArrayList<>();
+            for (XSLFTableCell cell : row.getCells()) {
+                cells.add(normalize(cell.getText()));
+            }
+            rows.add(String.join(" | ", cells));
+        }
+        return String.join(System.lineSeparator(), rows);
+    }
+
+    private String extractPictureText(XSLFPictureShape pictureShape) {
+        String name = pictureShape.getShapeName();
+        if (name == null || name.isBlank()) {
+            return "[Image]";
+        }
+        return "[Image: " + name.strip() + "]";
+    }
+
+    private String extractNotesText(XSLFNotes notes) {
+        if (notes == null) {
+            return "";
+        }
+
+        List<String> noteSections = new ArrayList<>();
+        for (XSLFShape shape : notes.getShapes()) {
+            if (shape instanceof XSLFTextShape textShape) {
+                String text = normalize(textShape.getText());
+                if (!text.isBlank()) {
+                    noteSections.add(text);
+                }
+            }
+        }
+        return String.join(System.lineSeparator(), noteSections).trim();
     }
 }

@@ -5,5 +5,6 @@ public enum DocumentSourceType {
     IMAGE,
     DOCX,
     XLSX,
+    PPTX,
     UNKNOWN
 }

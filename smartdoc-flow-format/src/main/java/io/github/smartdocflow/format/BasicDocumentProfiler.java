@@ -42,6 +42,9 @@ public final class BasicDocumentProfiler implements DocumentProfiler {
         if (fileName.endsWith(".xlsx")) {
             return DocumentSourceType.XLSX;
         }
+        if (fileName.endsWith(".pptx")) {
+            return DocumentSourceType.PPTX;
+        }
         if (fileName.endsWith(".png") || fileName.endsWith(".jpg") || fileName.endsWith(".jpeg") || fileName.endsWith(".tiff")) {
             return DocumentSourceType.IMAGE;
         }
