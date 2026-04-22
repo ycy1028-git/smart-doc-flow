@@ -20,6 +20,17 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.DataFormatter;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.apache.poi.xwpf.usermodel.IBodyElement;
+import org.apache.poi.xwpf.usermodel.XWPFDocument;
+import org.apache.poi.xwpf.usermodel.XWPFParagraph;
+import org.apache.poi.xwpf.usermodel.XWPFTable;
+import org.apache.poi.xwpf.usermodel.XWPFTableCell;
+import org.apache.poi.xwpf.usermodel.XWPFTableRow;
 import org.apache.poi.xslf.usermodel.XMLSlideShow;
 import org.apache.poi.xslf.usermodel.XSLFNotes;
 import org.apache.poi.xslf.usermodel.XSLFPictureShape;
@@ -31,9 +42,16 @@ import org.apache.poi.xslf.usermodel.XSLFTableRow;
 import org.apache.poi.xslf.usermodel.XSLFTextShape;
 
 public final class BasicOfficeExtractor implements FormatExtractor {
+    private static final DataFormatter DATA_FORMATTER = new DataFormatter();
 
     @Override
     public FormatExtractionResult extract(Path source, DocumentProfile profile) {
+        if (profile.sourceType() == DocumentSourceType.DOCX) {
+            return extractDocx(source);
+        }
+        if (profile.sourceType() == DocumentSourceType.XLSX) {
+            return extractXlsx(source);
+        }
         if (profile.sourceType() == DocumentSourceType.PPTX) {
             return extractPptx(source);
         }
@@ -44,8 +62,169 @@ public final class BasicOfficeExtractor implements FormatExtractor {
 
     @Override
     public void extract(Path source, DocumentProfile profile, DocumentIr ir) {
+        if (profile.sourceType() == DocumentSourceType.DOCX) {
+            extractDocxIntoIr(source, ir);
+            return;
+        }
+        if (profile.sourceType() == DocumentSourceType.XLSX) {
+            extractXlsxIntoIr(source, ir);
+            return;
+        }
         if (profile.sourceType() == DocumentSourceType.PPTX) {
             extractPptxIntoIr(source, ir);
+        }
+    }
+
+    private FormatExtractionResult extractDocx(Path source) {
+        try (InputStream inputStream = java.nio.file.Files.newInputStream(source);
+             XWPFDocument document = new XWPFDocument(inputStream)) {
+            String pageText = normalize(extractDocxBodyText(document));
+            if (pageText.isBlank()) {
+                String placeholder = "No DOCX content extracted from " + source.getFileName();
+                return new FormatExtractionResult(source, placeholder, List.of(placeholder), List.of(splitLines(placeholder)), 1);
+            }
+            return new FormatExtractionResult(source, pageText, List.of(pageText), List.of(splitLines(pageText)), 1);
+        } catch (Exception e) {
+            String placeholder = "Failed to extract DOCX content from " + source.getFileName() + ": " + e.getMessage();
+            return new FormatExtractionResult(source, placeholder, List.of(placeholder), List.of(splitLines(placeholder)), 1);
+        }
+    }
+
+    private void extractDocxIntoIr(Path source, DocumentIr ir) {
+        try (InputStream inputStream = java.nio.file.Files.newInputStream(source);
+             XWPFDocument document = new XWPFDocument(inputStream)) {
+            updateMetaPageCount(ir, 1);
+
+            String containerId = UUID.randomUUID().toString();
+            ir.addContainer(new Container(
+                containerId,
+                ContainerType.PAGE,
+                0,
+                "Page 1",
+                0, 0,
+                Bbox.EMPTY,
+                Map.of()
+            ));
+
+            int order = 0;
+            for (IBodyElement element : document.getBodyElements()) {
+                if (element instanceof XWPFParagraph paragraph) {
+                    String text = normalize(paragraph.getText());
+                    if (text.isBlank()) {
+                        continue;
+                    }
+                    NodeType nodeType = paragraph.getStyle() != null && paragraph.getStyle().toLowerCase().contains("title")
+                        ? NodeType.TITLE
+                        : NodeType.PARAGRAPH;
+                    ir.addNode(new Node(
+                        UUID.randomUUID().toString(),
+                        nodeType,
+                        containerId,
+                        Bbox.EMPTY,
+                        text,
+                        List.of(),
+                        1.0,
+                        String.valueOf(order++),
+                        List.of(new SourceRef("docxBody", containerId, 0, text.length())),
+                        Map.of(),
+                        Set.of("EXTRACT")
+                    ));
+                    continue;
+                }
+                if (element instanceof XWPFTable table) {
+                    String tableText = normalize(extractDocxTableText(table));
+                    if (tableText.isBlank()) {
+                        continue;
+                    }
+                    ir.addNode(new Node(
+                        UUID.randomUUID().toString(),
+                        NodeType.TABLE,
+                        containerId,
+                        Bbox.EMPTY,
+                        tableText,
+                        List.of(),
+                        1.0,
+                        String.valueOf(order++),
+                        List.of(new SourceRef("docxTable", containerId, 0, tableText.length())),
+                        Map.of(),
+                        Set.of("EXTRACT")
+                    ));
+                }
+            }
+        } catch (Exception ignored) {
+        }
+    }
+
+    private FormatExtractionResult extractXlsx(Path source) {
+        try (InputStream inputStream = java.nio.file.Files.newInputStream(source);
+             XSSFWorkbook workbook = new XSSFWorkbook(inputStream)) {
+            List<String> pageTexts = new ArrayList<>();
+            List<List<String>> pageLines = new ArrayList<>();
+
+            for (Sheet sheet : workbook) {
+                String sheetText = normalize(extractSheetText(sheet));
+                if (sheetText.isBlank()) {
+                    continue;
+                }
+                pageTexts.add(sheetText);
+                pageLines.add(splitLines(sheetText));
+            }
+
+            if (pageTexts.isEmpty()) {
+                String placeholder = "No XLSX content extracted from " + source.getFileName();
+                return new FormatExtractionResult(source, placeholder, List.of(placeholder), List.of(splitLines(placeholder)), 1);
+            }
+
+            String fullText = String.join(System.lineSeparator() + System.lineSeparator(), pageTexts).trim();
+            return new FormatExtractionResult(source, fullText, pageTexts, pageLines, pageTexts.size());
+        } catch (Exception e) {
+            String placeholder = "Failed to extract XLSX content from " + source.getFileName() + ": " + e.getMessage();
+            return new FormatExtractionResult(source, placeholder, List.of(placeholder), List.of(splitLines(placeholder)), 1);
+        }
+    }
+
+    private void extractXlsxIntoIr(Path source, DocumentIr ir) {
+        try (InputStream inputStream = java.nio.file.Files.newInputStream(source);
+             XSSFWorkbook workbook = new XSSFWorkbook(inputStream)) {
+            int sheetCount = workbook.getNumberOfSheets();
+            updateMetaPageCount(ir, Math.max(sheetCount, 1));
+
+            int sheetIndex = 0;
+            for (Sheet sheet : workbook) {
+                String sheetText = normalize(extractSheetText(sheet));
+                if (sheetText.isBlank()) {
+                    sheetIndex++;
+                    continue;
+                }
+
+                String containerId = UUID.randomUUID().toString();
+                ir.addContainer(new Container(
+                    containerId,
+                    ContainerType.SHEET,
+                    sheetIndex,
+                    sheet.getSheetName(),
+                    0, 0,
+                    Bbox.EMPTY,
+                    Map.of()
+                ));
+
+                String labeledTable = sheet.getSheetName() + System.lineSeparator() + sheetText;
+                ir.addNode(new Node(
+                    UUID.randomUUID().toString(),
+                    NodeType.TABLE,
+                    containerId,
+                    Bbox.EMPTY,
+                    labeledTable,
+                    List.of(),
+                    1.0,
+                    String.valueOf(sheetIndex),
+                    List.of(new SourceRef("xlsxSheet", containerId, 0, labeledTable.length())),
+                    Map.of(),
+                    Set.of("EXTRACT")
+                ));
+                sheetIndex++;
+            }
+        } catch (Exception ignored) {
         }
     }
 
@@ -256,6 +435,59 @@ public final class BasicOfficeExtractor implements FormatExtractor {
         }
 
         return String.join(System.lineSeparator(), sections).trim();
+    }
+
+    private String extractDocxBodyText(XWPFDocument document) {
+        List<String> sections = new ArrayList<>();
+        for (IBodyElement element : document.getBodyElements()) {
+            if (element instanceof XWPFParagraph paragraph) {
+                String text = normalize(paragraph.getText());
+                if (!text.isBlank()) {
+                    sections.add(text);
+                }
+                continue;
+            }
+            if (element instanceof XWPFTable table) {
+                String tableText = normalize(extractDocxTableText(table));
+                if (!tableText.isBlank()) {
+                    sections.add(tableText);
+                }
+            }
+        }
+        return String.join(System.lineSeparator() + System.lineSeparator(), sections).trim();
+    }
+
+    private String extractDocxTableText(XWPFTable table) {
+        List<String> rows = new ArrayList<>();
+        for (XWPFTableRow row : table.getRows()) {
+            List<String> cells = new ArrayList<>();
+            for (XWPFTableCell cell : row.getTableCells()) {
+                cells.add(normalize(cell.getText()));
+            }
+            rows.add(String.join(" | ", cells));
+        }
+        return String.join(System.lineSeparator(), rows);
+    }
+
+    private String extractSheetText(Sheet sheet) {
+        List<String> rows = new ArrayList<>();
+        for (Row row : sheet) {
+            List<String> cells = new ArrayList<>();
+            short firstCell = row.getFirstCellNum();
+            short lastCell = row.getLastCellNum();
+            if (firstCell < 0 || lastCell < 0) {
+                continue;
+            }
+            for (int cellIndex = firstCell; cellIndex < lastCell; cellIndex++) {
+                Cell cell = row.getCell(cellIndex, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL);
+                cells.add(cell == null ? "" : normalize(DATA_FORMATTER.formatCellValue(cell)));
+            }
+            String rowText = String.join(" | ", cells).stripTrailing();
+            if (!rowText.isBlank()) {
+                rows.add(rowText);
+            }
+        }
+        return String.join(System.lineSeparator(), rows);
     }
 
     private String extractTableText(XSLFTable table) {

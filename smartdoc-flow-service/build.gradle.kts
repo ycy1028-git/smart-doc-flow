@@ -9,6 +9,8 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
+    testImplementation("org.apache.poi:poi-ooxml:5.2.5")
+    testImplementation("org.apache.pdfbox:pdfbox:3.0.2")
 }
 
 tasks.withType<Test>().configureEach {

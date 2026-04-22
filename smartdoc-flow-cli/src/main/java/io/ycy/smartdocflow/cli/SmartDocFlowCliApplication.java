@@ -1,8 +1,10 @@
 package io.ycy.smartdocflow.cli;
 
+import io.ycy.smartdocflow.core.model.ir.Diagnostic;
 import io.ycy.smartdocflow.sdk.SmartDocFlow;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 
 public final class SmartDocFlowCliApplication {
     private SmartDocFlowCliApplication() {
@@ -25,6 +27,11 @@ public final class SmartDocFlowCliApplication {
 
         if (!"parse".equals(args[0])) {
             printUsage();
+            return;
+        }
+
+        if (containsDiagnosticsFlag(args)) {
+            printDiagnostics(smartDocFlow, input);
             return;
         }
 
@@ -67,6 +74,13 @@ public final class SmartDocFlowCliApplication {
         System.out.println("imageHeavy: " + profile.imageHeavy());
     }
 
+    private static void printDiagnostics(SmartDocFlow smartDocFlow, Path input) {
+        List<Diagnostic> diagnostics = smartDocFlow.parseDiagnostics(input);
+        for (Diagnostic diagnostic : diagnostics) {
+            System.out.println(diagnostic.stage() + "." + diagnostic.key() + ": " + diagnostic.value());
+        }
+    }
+
     private static boolean containsJsonFlag(String[] args) {
         for (int i = 0; i < args.length; i++) {
             if ("--format".equals(args[i]) && i + 1 < args.length) {
@@ -76,7 +90,16 @@ public final class SmartDocFlowCliApplication {
         return false;
     }
 
+    private static boolean containsDiagnosticsFlag(String[] args) {
+        for (String arg : args) {
+            if ("--diagnostics".equals(arg)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private static void printUsage() {
-        System.out.println("Usage: smartdoc-flow <parse|profile> --input <file> [--format markdown|json] [--output <file>]");
+        System.out.println("Usage: smartdoc-flow <parse|profile> --input <file> [--format markdown|json] [--output <file>] [--diagnostics]");
     }
 }

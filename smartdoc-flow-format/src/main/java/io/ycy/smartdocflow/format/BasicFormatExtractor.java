@@ -43,6 +43,9 @@ public final class BasicFormatExtractor implements FormatExtractor {
         if (profile.sourceType() == DocumentSourceType.PPTX) {
             return extractPptx(source);
         }
+        if (profile.sourceType() == DocumentSourceType.IMAGE) {
+            return emptyImageExtraction(source);
+        }
 
         String placeholder = "SmartDoc-Flow skeleton extracted content for " + source.getFileName();
         return new FormatExtractionResult(source, placeholder, List.of(placeholder), List.of(List.of(placeholder)), 1);
@@ -127,6 +130,10 @@ public final class BasicFormatExtractor implements FormatExtractor {
             String placeholder = "Failed to extract PDF content from " + source.getFileName() + ": " + e.getMessage();
             return new FormatExtractionResult(source, placeholder, List.of(placeholder), List.of(splitLines(placeholder)), 1);
         }
+    }
+
+    private FormatExtractionResult emptyImageExtraction(Path source) {
+        return new FormatExtractionResult(source, "", List.of(), List.of(), 1);
     }
 
     private List<String> splitLines(String text) {

@@ -144,6 +144,12 @@ public class Demo {
 3. `parseToMarkdown(Path source)`
 4. `parseToJson(Path source)`
 
+其中如果你是对接 RAG / 向量化链路，最推荐优先使用 `parse(Path source)`：
+
+1. `parse` 返回结构化的 `DocumentResult`
+2. 下游可以基于 `blocks` 自行做切块
+3. `Markdown` 更适合展示和人工查看，不建议替代 block 结果作为主切块输入
+
 示例：
 
 ```java
@@ -181,14 +187,12 @@ public class Demo {
 4. `XLSX` 基础提取
 5. `PPTX` 基础解析
 
-其中 `PPTX` 当前属于基础支持，适合期待：
+当前 Office 类型属于基础支持，适合期待：
 
-1. slide 标题提取
-2. 文本框提取
-3. 基础表格文本提取
-4. 图片占位说明
-5. 备注提取
-6. `Markdown` / `JSON` 输出
+1. `DOCX` 标题、正文和基础表格文本提取
+2. `XLSX` sheet 级基础表格文本提取
+3. `PPTX` slide 标题、文本框、基础表格、图片占位说明和备注提取
+4. `Markdown` / `JSON` 输出
 
 当前不建议期待：
 

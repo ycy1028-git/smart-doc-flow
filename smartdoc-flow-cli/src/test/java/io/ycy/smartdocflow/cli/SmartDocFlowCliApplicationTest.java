@@ -78,6 +78,20 @@ class SmartDocFlowCliApplicationTest {
         }
     }
 
+    @Test
+    void printsDiagnosticsWhenRequested() {
+        String output = captureStdout(() -> SmartDocFlowCliApplication.main(new String[] {
+            "parse",
+            "--input",
+            "../sample.txt",
+            "--diagnostics"
+        }));
+
+        assertTrue(output.contains("PIPELINE.sourceType:"));
+        assertTrue(output.contains("EXTRACT.beforeNodes:"));
+        assertTrue(output.contains("POST.afterNodes:"));
+    }
+
     private String captureStdout(Runnable action) {
         PrintStream originalOut = System.out;
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();

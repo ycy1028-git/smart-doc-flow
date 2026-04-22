@@ -20,6 +20,23 @@
 3. 可直接输出 `Markdown` 和 `JSON`
 4. 适合做主链路验证和基础集成
 
+对于 RAG / 向量化场景，当前开源版也适合作为前置文档解析层使用：
+
+1. 负责把上传文档解析为结构化 block 数据
+2. 为外部 chunking / embedding 流程提供统一输入
+3. 不在当前仓库内内建切块、向量入库和召回链路
+
+## RAG 接入建议
+
+如果你是把 `SmartDoc-Flow` 接到 RAG / 向量化链路里，推荐按下面方式使用：
+
+1. 先上传文档并完成解析
+2. 优先消费结构化 block 结果，而不是直接基于整篇 `Markdown` 切块
+3. 在外部系统中按标题、页码、块类型或相邻 block 自定义切块策略
+4. 将切块结果与 `fileName`、`sourceType`、`page`、`order` 等元信息一起写入向量库
+
+当前仓库负责把文档转换为后续可切块、可向量化的基础数据，不负责内建 embedding、向量索引和召回排序。
+
 当前适合优先验证的文档类型包括：
 
 1. 数字原生 PDF
@@ -36,13 +53,14 @@
 3. 表格至少能输出基本可消费结构
 4. `Markdown` 和 `JSON` 输出稳定
 
-对 `PPTX` 的支持范围建议理解为“基础解析”，当前适合承诺的范围包括：
+对当前开源版的 Office 支持范围，建议理解为“基础解析”，当前适合承诺的范围包括：
 
-1. 按页提取 slide 内容
-2. 提取标题、文本框、基础表格、图片和备注的基础内容
-3. 输出 slide 级 `Markdown` 和 `JSON`
+1. `DOCX` 的标题、正文和基础表格文本提取
+2. `XLSX` 的 sheet 级基础表格文本提取
+3. `PPTX` 的 slide 级标题、文本框、基础表格、图片和备注提取
+4. 输出基础可消费的 `Markdown` 和 `JSON`
 
-当前不建议对开源版承诺的 `PPTX` 能力包括：
+当前不建议对开源版承诺的 Office 能力包括：
 
 1. 复杂版式的高保真还原
 2. SmartArt 语义重建
@@ -97,7 +115,7 @@
 | 目标 | 本地运行、集成验证、二次开发 | 提升复杂文档精度、稳定性与交付效率 |
 | 输出 | `Markdown`、`JSON` | `Markdown`、`JSON`，并支持更强场景增强 |
 | 入口 | CLI、Java SDK、轻量 Demo Web | 企业增强 SDK、企业 CLI、私有化服务 |
-| 文档类型 | 主流 PDF、图片、基础 Office、`PPTX` 基础解析 | 复杂财报、法务、科研、工业等专项文档 |
+| 文档类型 | 主流 PDF、图片、基础 Office（`DOCX`、`XLSX`、`PPTX`） | 复杂财报、法务、科研、工业等专项文档 |
 | OCR | 基础 OCR 路径 | 更强 OCR Provider 与路由策略 |
 | 结构恢复 | 基础阅读顺序与基础结构恢复 | 高级阅读顺序、复杂表格和专项结构恢复 |
 | 部署 | 本地运行、基础配置 | 私有化部署、Docker 化交付、专项支持 |
@@ -225,6 +243,30 @@ http://localhost:8080
 
 启动 Demo Web 后，打开 `http://localhost:8080` 上传文件。
 
+如果你要验证图片或扫描 PDF 的真实 OCR 文本，请先准备本地 `tesseract` 环境。
+
+常见安装方式：
+
+```bash
+# macOS (Homebrew)
+brew install tesseract
+
+# Ubuntu / Debian
+sudo apt-get update
+sudo apt-get install -y tesseract-ocr
+```
+
+如果 `tesseract` 不在默认路径，也可以通过环境变量指定：
+
+```bash
+export SMARTDOC_FLOW_TESSERACT_PATH=/path/to/tesseract
+```
+
+当前开源版不会把 `tesseract` 二进制打包进仓库，而是把它作为本地可选运行依赖：
+
+1. 已安装时，图片和扫描 PDF 会走真实 OCR 路径
+2. 未安装时，系统会稳定降级，并在 Demo / CLI / diagnostics 中给出提示
+
 建议优先验证：
 
 1. `sample.txt`
@@ -240,6 +282,13 @@ http://localhost:8080
 5. `imageHeavy`
 6. `Markdown` 可读性
 7. `JSON` 结构化结果
+8. `Diagnostics` 中的 pipeline 过程
+
+当前 Demo 页面还会直接展示：
+
+1. `PIPELINE` 阶段识别出的基础画像
+2. `EXTRACT` / `OCR` / `NORMALIZE` / `TABLE_RECOVER` / `POST` 等阶段的关键诊断信息
+3. 是否发生了 OCR 降级或回退
 
 ### 3. API 验证
 
@@ -249,12 +298,35 @@ Demo 服务接口：
 POST /api/demo/parse
 ```
 
+接口当前返回：
+
+1. 文件名
+2. 基础 Profile 字段
+3. `Markdown`
+4. `JSON`
+5. `diagnostics`
+
 可以直接测试：
 
 ```bash
 curl -X POST http://localhost:8080/api/demo/parse \
   -F "file=@sample.txt"
 ```
+
+如果想直接查看返回的 `diagnostics`，可以配合 `jq`：
+
+```bash
+curl -s -X POST http://localhost:8080/api/demo/parse \
+  -F "file=@sample.txt" | jq '.diagnostics'
+```
+
+如果你上传的是图片或扫描 PDF，且 `diagnostics` 中出现：
+
+```json
+{"stage":"OCR","key":"backend","value":"tesseract-not-found"}
+```
+
+说明当前 Demo 所在环境没有检测到 `tesseract`，OCR 已降级。
 
 ## 使用方式
 

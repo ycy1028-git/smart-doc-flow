@@ -3,6 +3,9 @@ package io.ycy.smartdocflow.sdk;
 import io.ycy.smartdocflow.core.model.DocumentProfile;
 import io.ycy.smartdocflow.core.model.DocumentResult;
 import io.ycy.smartdocflow.core.model.ParseOptions;
+import io.ycy.smartdocflow.core.model.ir.Diagnostic;
+import io.ycy.smartdocflow.core.model.ir.DocumentIr;
+import java.util.List;
 import java.nio.file.Path;
 
 public final class SmartDocFlow {
@@ -18,6 +21,14 @@ public final class SmartDocFlow {
 
     public DocumentResult parse(Path source) {
         return engine.parse(source, ParseOptions.markdown());
+    }
+
+    public DocumentIr parseToIr(Path source) {
+        return engine.parseToIr(source);
+    }
+
+    public List<Diagnostic> parseDiagnostics(Path source) {
+        return parseToIr(source).getDiagnostics();
     }
 
     public String parseToMarkdown(Path source) {

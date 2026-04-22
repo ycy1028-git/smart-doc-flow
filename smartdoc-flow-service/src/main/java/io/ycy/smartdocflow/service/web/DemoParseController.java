@@ -1,10 +1,12 @@
 package io.ycy.smartdocflow.service.web;
 
 import io.ycy.smartdocflow.core.model.DocumentProfile;
+import io.ycy.smartdocflow.core.model.ir.Diagnostic;
 import io.ycy.smartdocflow.sdk.SmartDocFlow;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import org.springframework.http.MediaType;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -31,6 +33,14 @@ public class DemoParseController {
             DocumentProfile profile = smartDocFlow.profile(tempFile);
             String markdown = smartDocFlow.parseToMarkdown(tempFile);
             String json = smartDocFlow.parseToJson(tempFile);
+            List<DiagnosticView> diagnostics = smartDocFlow.parseDiagnostics(tempFile).stream()
+                .map(diagnostic -> new DiagnosticView(
+                    diagnostic.stage(),
+                    diagnostic.key(),
+                    diagnostic.value() == null ? null : String.valueOf(diagnostic.value()),
+                    diagnostic.timestamp()
+                ))
+                .toList();
             return new DemoParseResponse(
                 originalFilename,
                 profile.sourceType().name(),
@@ -39,7 +49,8 @@ public class DemoParseController {
                 profile.tableHeavy(),
                 profile.imageHeavy(),
                 markdown,
-                json
+                json,
+                diagnostics
             );
         } finally {
             Files.deleteIfExists(tempFile);
@@ -58,7 +69,16 @@ public class DemoParseController {
         boolean tableHeavy,
         boolean imageHeavy,
         String markdown,
-        String json
+        String json,
+        List<DiagnosticView> diagnostics
+    ) {
+    }
+
+    public record DiagnosticView(
+        String stage,
+        String key,
+        String value,
+        long timestamp
     ) {
     }
 }

@@ -58,6 +58,10 @@ public final class DefaultSmartDocFlowEngine implements SmartDocFlowEngine {
         return IrResultMapper.toDocumentResult(ir);
     }
 
+    public DocumentIr parseToIr(Path source) {
+        return pipeline.execute(source);
+    }
+
     @Override
     public String render(Path source, ParseOptions options) {
         DocumentIr ir = pipeline.execute(source);
