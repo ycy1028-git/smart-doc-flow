@@ -5,7 +5,7 @@ plugins {
 import org.gradle.api.publish.maven.MavenPublication
 
 allprojects {
-    group = "io.github.smartdocflow"
+    group = "io.ycy.smartdocflow"
     version = "0.1.0-SNAPSHOT"
 
     repositories {

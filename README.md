@@ -186,6 +186,12 @@ http://localhost:8080
 ./smartdoc-flow-cli/build/install/smartdoc-flow-cli/bin/smartdoc-flow-cli parse --input sample.txt
 ```
 
+如需只看基础 Profile：
+
+```bash
+./smartdoc-flow-cli/build/install/smartdoc-flow-cli/bin/smartdoc-flow-cli profile --input sample.txt
+```
+
 如需 `JSON` 输出：
 
 ```bash
@@ -203,6 +209,7 @@ http://localhost:8080
 执行：
 
 ```bash
+./smartdoc-flow-cli/build/install/smartdoc-flow-cli/bin/smartdoc-flow-cli profile --input sample.txt
 ./smartdoc-flow-cli/build/install/smartdoc-flow-cli/bin/smartdoc-flow-cli parse --input sample.txt
 ./smartdoc-flow-cli/build/install/smartdoc-flow-cli/bin/smartdoc-flow-cli parse --input sample.txt --format json
 ```
@@ -210,8 +217,9 @@ http://localhost:8080
 重点观察：
 
 1. 是否能正常读取输入文件
-2. 是否能稳定输出 `Markdown`
-3. 是否能稳定输出 `JSON`
+2. 是否能输出基础 Profile
+3. 是否能稳定输出 `Markdown`
+4. 是否能稳定输出 `JSON`
 
 ### 2. Web 验证
 

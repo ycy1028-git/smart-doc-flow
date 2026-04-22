@@ -10,5 +10,5 @@ dependencies {
 }
 
 application {
-    mainClass.set("io.github.smartdocflow.cli.SmartDocFlowCliApplication")
+    mainClass.set("io.ycy.smartdocflow.cli.SmartDocFlowCliApplication")
 }

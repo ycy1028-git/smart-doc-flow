@@ -21,7 +21,7 @@ smartdoc-flow-sdk
 对外入口类是：
 
 ```java
-io.github.smartdocflow.sdk.SmartDocFlow
+io.ycy.smartdocflow.sdk.SmartDocFlow
 ```
 
 ## 2. 如何打包 SDK
@@ -89,7 +89,7 @@ repositories {
 }
 
 dependencies {
-    implementation("io.github.smartdocflow:smartdoc-flow-sdk:0.1.0-SNAPSHOT")
+    implementation("io.ycy.smartdocflow:smartdoc-flow-sdk:0.1.0-SNAPSHOT")
 }
 ```
 
@@ -118,7 +118,7 @@ dependencies {
 当前 SDK 的 Facade 非常简单：
 
 ```java
-import io.github.smartdocflow.sdk.SmartDocFlow;
+import io.ycy.smartdocflow.sdk.SmartDocFlow;
 import java.nio.file.Path;
 
 public class Demo {
@@ -137,7 +137,7 @@ public class Demo {
 
 ## 5. 当前可调用的方法
 
-`io.github.smartdocflow.sdk.SmartDocFlow` 当前提供：
+`io.ycy.smartdocflow.sdk.SmartDocFlow` 当前提供：
 
 1. `profile(Path source)`
 2. `parse(Path source)`
@@ -147,9 +147,9 @@ public class Demo {
 示例：
 
 ```java
-import io.github.smartdocflow.core.model.DocumentProfile;
-import io.github.smartdocflow.core.model.DocumentResult;
-import io.github.smartdocflow.sdk.SmartDocFlow;
+import io.ycy.smartdocflow.core.model.DocumentProfile;
+import io.ycy.smartdocflow.core.model.DocumentResult;
+import io.ycy.smartdocflow.sdk.SmartDocFlow;
 import java.nio.file.Path;
 
 public class Demo {
