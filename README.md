@@ -165,16 +165,33 @@ http://localhost:8080
 
 ### Docker Compose 运行
 
-仓库根目录提供了一个最小可用的 `docker-compose.yml`，可以直接启动 Demo：
+仓库根目录提供了两份可直接使用的 Compose 文件：
+
+1. `docker-compose.yml`：基础版
+2. `docker-compose.ocr.yml`：OCR 版
+
+基础版启动：
 
 ```bash
 docker compose up -d
+```
+
+OCR 版启动：
+
+```bash
+docker compose -f docker-compose.ocr.yml up -d
 ```
 
 停止并删除容器：
 
 ```bash
 docker compose down
+```
+
+如果是 OCR 版：
+
+```bash
+docker compose -f docker-compose.ocr.yml down
 ```
 
 默认访问地址：
@@ -190,6 +207,13 @@ http://localhost:8080
 3. 不要求配置附件目录、上传目录、输出目录等环境变量
 4. 不做文件持久化存储，上传文件仅在容器临时目录内参与解析
 5. 默认使用基础镜像，不启用内置 OCR 运行时
+
+当前 `docker-compose.ocr.yml` 默认配置为：
+
+1. 直接使用已发布的 OCR 扩展镜像
+2. 暴露 `8080` 端口
+3. 默认设置 `SMARTDOC_FLOW_TESSERACT_PATH=/usr/bin/tesseract`
+4. 适合图片 OCR 和扫描 PDF OCR 场景
 
 如果你想固定镜像版本，可以直接修改：
 
@@ -290,6 +314,12 @@ services:
       SMARTDOC_FLOW_TESSERACT_PATH: /usr/bin/tesseract
       TZ: Asia/Shanghai
     restart: unless-stopped
+```
+
+仓库里已经提供对应文件：
+
+```bash
+docker compose -f docker-compose.ocr.yml up -d
 ```
 
 也可以固定到具体 OCR 版本：
