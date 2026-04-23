@@ -3,8 +3,10 @@
 .gradle
 .idea
 **/build
+!smartdoc-flow-service/build/
+!smartdoc-flow-service/build/libs/
+!smartdoc-flow-service/build/libs/*.jar
 docs
 out
 *.iml
 .DS_Store
-
