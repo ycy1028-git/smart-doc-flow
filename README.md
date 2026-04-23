@@ -11,6 +11,14 @@
 3. 轻量 Demo Web
 4. 基础运行配置
 
+## Demo 演示地址
+
+在线 Demo：
+
+```text
+https://demo.yyapi.cc
+```
+
 ## 开源版定位
 
 开源版聚焦“基础支持”，强调：
