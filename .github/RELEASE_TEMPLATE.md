@@ -23,6 +23,13 @@ docker pull ghcr.io/ycy1028-git/smart-doc-flow:<tag>
 docker run --rm -p 8080:8080 ghcr.io/ycy1028-git/smart-doc-flow:<tag>
 ```
 
+如需 OCR 扩展镜像，可直接拉取：
+
+```bash
+docker pull ghcr.io/ycy1028-git/smart-doc-flow:<tag>-ocr
+docker run --rm -p 8080:8080 ghcr.io/ycy1028-git/smart-doc-flow:<tag>-ocr
+```
+
 默认访问地址：
 
 ```text
@@ -33,7 +40,8 @@ http://localhost:8080
 
 - 当前版本定位为 OSS 基础版 / 预览版
 - 当前仓库聚焦基础可用闭环，不承诺复杂文档高精度恢复
-- Docker 镜像默认不内置 `tesseract`，图片 OCR 和扫描 PDF OCR 会按当前开源版逻辑降级
+- 基础 Docker 镜像默认不内置 `tesseract`，图片 OCR 和扫描 PDF OCR 会按当前开源版逻辑降级
+- OCR 扩展镜像内置 `tesseract`，适合需要图片 OCR 和扫描 PDF OCR 的场景
 - 如需复杂表格恢复、高级 OCR、专项规则包或私有化交付，建议按企业增强能力单独规划
 
 ## Verification

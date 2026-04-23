@@ -112,22 +112,49 @@ https://demo.yyapi.cc
 
 ### 镜像地址
 
-当 GitHub 仓库推送形如 `v*` 的 tag 后，GitHub Actions 会自动构建并推送镜像到 GitHub Container Registry：
+当 GitHub 仓库推送形如 `v*` 的 tag 后，GitHub Actions 会自动构建并推送两类镜像到 GitHub Container Registry：
+
+1. 基础镜像
+2. OCR 扩展镜像
+
+基础镜像：
 
 ```text
 ghcr.io/ycy1028-git/smart-doc-flow:<tag>
+```
+
+OCR 扩展镜像：
+
+```text
+ghcr.io/ycy1028-git/smart-doc-flow:<tag>-ocr
 ```
 
 例如：
 
 ```bash
 docker pull ghcr.io/ycy1028-git/smart-doc-flow:v0.1.0
+docker pull ghcr.io/ycy1028-git/smart-doc-flow:v0.1.0-ocr
+```
+
+同时会额外维护两个便捷标签：
+
+```text
+ghcr.io/ycy1028-git/smart-doc-flow:latest
+ghcr.io/ycy1028-git/smart-doc-flow:ocr
 ```
 
 ### 运行方式
 
+基础镜像：
+
 ```bash
 docker run --rm -p 8080:8080 ghcr.io/ycy1028-git/smart-doc-flow:v0.1.0
+```
+
+OCR 扩展镜像：
+
+```bash
+docker run --rm -p 8080:8080 ghcr.io/ycy1028-git/smart-doc-flow:v0.1.0-ocr
 ```
 
 默认访问地址：
@@ -162,6 +189,7 @@ http://localhost:8080
 2. 暴露 `8080` 端口
 3. 不要求配置附件目录、上传目录、输出目录等环境变量
 4. 不做文件持久化存储，上传文件仅在容器临时目录内参与解析
+5. 默认使用基础镜像，不启用内置 OCR 运行时
 
 如果你想固定镜像版本，可以直接修改：
 
@@ -173,6 +201,18 @@ image: ghcr.io/ycy1028-git/smart-doc-flow:v0.1.0
 
 ```yaml
 image: ghcr.io/ycy1028-git/smart-doc-flow:v0.2.0
+```
+
+如果你希望直接使用 OCR 扩展镜像，可以改成：
+
+```yaml
+image: ghcr.io/ycy1028-git/smart-doc-flow:ocr
+```
+
+或者固定 OCR 版本：
+
+```yaml
+image: ghcr.io/ycy1028-git/smart-doc-flow:v0.2.0-ocr
 ```
 
 ### 环境变量说明
@@ -214,8 +254,9 @@ services:
 但要注意：
 
 1. 这是环境变量，不是 `--xxx=yyy` 这种应用启动参数
-2. 当前官方 Demo 镜像默认不内置 `tesseract`
-3. 所以即使配置了这个环境变量，容器内如果没有对应二进制，也无法启用真实 OCR
+2. 基础镜像默认不内置 `tesseract`
+3. 所以即使配置了这个环境变量，基础镜像内如果没有对应二进制，也无法启用真实 OCR
+4. OCR 扩展镜像已经内置 `tesseract`，默认路径就是 `/usr/bin/tesseract`
 
 ### Docker Compose 使用建议
 
@@ -223,18 +264,41 @@ services:
 
 1. 只做基础 Demo 验证时，直接 `docker compose up -d` 即可
 2. 默认无需配置存储目录类环境变量
-3. 如需图片 OCR / 扫描 PDF OCR，需要额外提供 `tesseract` 运行环境
+3. 如需图片 OCR / 扫描 PDF OCR，优先直接切换到 OCR 扩展镜像
 4. 当前开源版更适合做基础解析验证，不是附件持久化平台
 
 ### OCR 说明
 
-当前 Docker 镜像默认不内置 `tesseract`。
+基础 Docker 镜像默认不内置 `tesseract`。
 
 这意味着：
 
 1. 数字原生 PDF、基础 Office、普通文本链路可直接使用
 2. 图片 OCR 和扫描 PDF OCR 在容器内会按当前开源版逻辑降级
 3. diagnostics 中会保留 OCR 不可用提示，方便定位问题
+
+如果你需要容器内直接启用 OCR，建议使用 OCR 扩展镜像：
+
+```yaml
+services:
+  smart-doc-flow:
+    image: ghcr.io/ycy1028-git/smart-doc-flow:ocr
+    container_name: smart-doc-flow
+    ports:
+      - "8080:8080"
+    environment:
+      SMARTDOC_FLOW_TESSERACT_PATH: /usr/bin/tesseract
+      TZ: Asia/Shanghai
+    restart: unless-stopped
+```
+
+也可以固定到具体 OCR 版本：
+
+```yaml
+image: ghcr.io/ycy1028-git/smart-doc-flow:v0.1.0-ocr
+```
+
+当前不支持仅通过单独新增一个 `tesseract` sidecar 容器就让基础镜像自动启用 OCR，因为当前 OCR 调用方式是应用容器内本地进程调用，不是网络服务调用。
 
 ### 本地构建镜像
 
@@ -244,6 +308,14 @@ services:
 ./gradlew :smartdoc-flow-service:bootJar
 docker build -t smart-doc-flow:local .
 docker run --rm -p 8080:8080 smart-doc-flow:local
+```
+
+如果你想本地验证 OCR 扩展镜像，可以执行：
+
+```bash
+./gradlew :smartdoc-flow-service:bootJar
+docker build -t smart-doc-flow:local-ocr -f Dockerfile.ocr .
+docker run --rm -p 8080:8080 smart-doc-flow:local-ocr
 ```
 
 建议不放入公开仓库的内容包括：
