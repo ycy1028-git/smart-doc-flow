@@ -19,8 +19,8 @@
 如果当前版本已同步发布 GHCR 镜像，可直接拉取：
 
 ```bash
-docker pull ghcr.io/ycy1028/smart-doc-flow:<tag>
-docker run --rm -p 8080:8080 ghcr.io/ycy1028/smart-doc-flow:<tag>
+docker pull ghcr.io/ycy1028-git/smart-doc-flow:<tag>
+docker run --rm -p 8080:8080 ghcr.io/ycy1028-git/smart-doc-flow:<tag>
 ```
 
 默认访问地址：
