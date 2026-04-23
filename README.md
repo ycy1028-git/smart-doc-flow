@@ -128,6 +128,96 @@ docker run --rm -p 8080:8080 ghcr.io/ycy1028-git/smart-doc-flow:v0.1.0
 http://localhost:8080
 ```
 
+### Docker Compose 运行
+
+仓库根目录提供了一个最小可用的 `docker-compose.yml`，可以直接启动 Demo：
+
+```bash
+docker compose up -d
+```
+
+停止并删除容器：
+
+```bash
+docker compose down
+```
+
+默认访问地址：
+
+```text
+http://localhost:8080
+```
+
+当前 `docker-compose.yml` 默认配置为：
+
+1. 直接使用已发布的 Demo 镜像
+2. 暴露 `8080` 端口
+3. 不要求配置附件目录、上传目录、输出目录等环境变量
+4. 不做文件持久化存储，上传文件仅在容器临时目录内参与解析
+
+如果你想固定镜像版本，可以直接修改：
+
+```yaml
+image: ghcr.io/ycy1028-git/smart-doc-flow:v0.1.0
+```
+
+例如升级到新版本时，只需要改成：
+
+```yaml
+image: ghcr.io/ycy1028-git/smart-doc-flow:v0.2.0
+```
+
+### 环境变量说明
+
+当前 Demo 默认不需要配置额外环境变量。
+
+也就是说，下面这些内容当前都不是必填项：
+
+1. 上传附件存储目录
+2. 生成结果存储目录
+3. 临时文件目录
+
+原因是当前开源版 Demo 的处理方式是：
+
+1. 上传文件先写入系统临时目录
+2. 解析完成后立即删除临时文件
+3. `Markdown` 和 `JSON` 直接通过接口返回，不默认落盘保存
+
+当前唯一和运行行为相关的可选环境变量是：
+
+```text
+SMARTDOC_FLOW_TESSERACT_PATH
+```
+
+它的作用是指定 `tesseract` 可执行文件路径，用于图片和扫描 PDF 的 OCR。
+
+例如：
+
+```yaml
+services:
+  smart-doc-flow:
+    image: ghcr.io/ycy1028-git/smart-doc-flow:v0.1.0
+    ports:
+      - "8080:8080"
+    environment:
+      SMARTDOC_FLOW_TESSERACT_PATH: /usr/bin/tesseract
+```
+
+但要注意：
+
+1. 这是环境变量，不是 `--xxx=yyy` 这种应用启动参数
+2. 当前官方 Demo 镜像默认不内置 `tesseract`
+3. 所以即使配置了这个环境变量，容器内如果没有对应二进制，也无法启用真实 OCR
+
+### Docker Compose 使用建议
+
+建议按下面方式对外说明：
+
+1. 只做基础 Demo 验证时，直接 `docker compose up -d` 即可
+2. 默认无需配置存储目录类环境变量
+3. 如需图片 OCR / 扫描 PDF OCR，需要额外提供 `tesseract` 运行环境
+4. 当前开源版更适合做基础解析验证，不是附件持久化平台
+
 ### OCR 说明
 
 当前 Docker 镜像默认不内置 `tesseract`。

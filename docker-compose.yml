@@ -1,0 +1,11 @@
+services:
+  smart-doc-flow:
+    image: ghcr.io/ycy1028-git/smart-doc-flow:latest
+    container_name: smart-doc-flow
+    ports:
+      - "8080:8080"
+    environment:
+      # Optional: only useful when the container image already contains tesseract.
+      # SMARTDOC_FLOW_TESSERACT_PATH: /usr/bin/tesseract
+      TZ: Asia/Shanghai
+    restart: unless-stopped
