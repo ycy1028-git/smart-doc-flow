@@ -98,6 +98,56 @@
 4. 轻量 Demo Web
 5. 启动脚本和基础配置
 
+## Docker 使用
+
+当前仓库支持将 `smartdoc-flow-service` 发布为 Docker 镜像，便于用户直接拉取和运行 Demo Web。
+
+### 镜像地址
+
+当 GitHub 仓库推送形如 `v*` 的 tag 后，GitHub Actions 会自动构建并推送镜像到 GitHub Container Registry：
+
+```text
+ghcr.io/ycy1028-git/smart-doc-flow:<tag>
+```
+
+例如：
+
+```bash
+docker pull ghcr.io/ycy1028-git/smart-doc-flow:v0.1.0
+```
+
+### 运行方式
+
+```bash
+docker run --rm -p 8080:8080 ghcr.io/ycy1028-git/smart-doc-flow:v0.1.0
+```
+
+默认访问地址：
+
+```text
+http://localhost:8080
+```
+
+### OCR 说明
+
+当前 Docker 镜像默认不内置 `tesseract`。
+
+这意味着：
+
+1. 数字原生 PDF、基础 Office、普通文本链路可直接使用
+2. 图片 OCR 和扫描 PDF OCR 在容器内会按当前开源版逻辑降级
+3. diagnostics 中会保留 OCR 不可用提示，方便定位问题
+
+### 本地构建镜像
+
+如果你想本地先验证镜像，可以执行：
+
+```bash
+./gradlew :smartdoc-flow-service:bootJar
+docker build -t smart-doc-flow:local .
+docker run --rm -p 8080:8080 smart-doc-flow:local
+```
+
 建议不放入公开仓库的内容包括：
 
 1. 更强 OCR Provider 接入实现
