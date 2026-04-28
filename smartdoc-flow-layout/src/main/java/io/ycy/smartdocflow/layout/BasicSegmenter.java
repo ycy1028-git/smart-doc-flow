@@ -16,10 +16,13 @@ public final class BasicSegmenter implements Segmenter {
         var oldNodes = new ArrayList<>(ir.getNodes());
         ir.getNodes().clear();
         int createdSegments = 0;
+        int skippedNodes = 0;
+        ir.addDiagnostic(new Diagnostic("SEGMENT", "strategy", "split-paragraphs-by-blank-lines", System.currentTimeMillis()));
 
         for (Node node : oldNodes) {
             List<String> segments = splitSegments(node.text());
             if (segments.size() <= 1 || !supportsSegmentation(node)) {
+                skippedNodes++;
                 ir.addNode(new Node(
                     node.id(),
                     node.nodeType(),
@@ -55,6 +58,8 @@ public final class BasicSegmenter implements Segmenter {
             }
         }
         ir.addDiagnostic(new Diagnostic("SEGMENT", "createdSegments", createdSegments, System.currentTimeMillis()));
+        ir.addDiagnostic(new Diagnostic("SEGMENT", "skippedNodes", skippedNodes, System.currentTimeMillis()));
+        ir.addDiagnostic(new Diagnostic("SEGMENT", "reason", createdSegments == 0 ? "no-splittable-content" : "blank-line-splitting-applied", System.currentTimeMillis()));
     }
 
     private boolean supportsSegmentation(Node node) {

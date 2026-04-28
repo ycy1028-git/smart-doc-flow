@@ -1,0 +1,1 @@
+{"documentId":"<doc-id>","fileName":"sample.txt","blocks":[{"id":"<node-id>","type":"HEADING","page":0,"order":0,"text":"SmartDoc-Flow skeleton extracted content for sample.txt"}]}

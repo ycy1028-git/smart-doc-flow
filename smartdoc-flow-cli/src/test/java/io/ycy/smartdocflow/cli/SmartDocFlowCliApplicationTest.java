@@ -88,8 +88,43 @@ class SmartDocFlowCliApplicationTest {
         }));
 
         assertTrue(output.contains("PIPELINE.sourceType:"));
+        assertTrue(output.contains("PIPELINE.multiColumn:"));
+        assertTrue(output.contains("EXTRACT.started:"));
+        assertTrue(output.contains("EXTRACT.durationMs:"));
+        assertTrue(output.contains("EXTRACT.nodeDelta:"));
         assertTrue(output.contains("EXTRACT.beforeNodes:"));
         assertTrue(output.contains("POST.afterNodes:"));
+    }
+
+    @Test
+    void printsErrorForMissingInputFile() {
+        ByteArrayOutputStream error = new ByteArrayOutputStream();
+        int exitCode = captureStderr(error, () -> SmartDocFlowCliApplication.run(new String[] {
+            "parse",
+            "--input",
+            "missing-file.txt"
+        }));
+
+        assertTrue(error.toString(StandardCharsets.UTF_8).contains("Error: 输入文件不存在:"));
+        assertTrue(exitCode == 1);
+    }
+
+    @Test
+    void printsErrorForDirectoryInput() throws Exception {
+        Path directory = Files.createTempDirectory("smartdoc-cli-dir-");
+        try {
+            ByteArrayOutputStream error = new ByteArrayOutputStream();
+            int exitCode = captureStderr(error, () -> SmartDocFlowCliApplication.run(new String[] {
+                "parse",
+                "--input",
+                directory.toString()
+            }));
+
+            assertTrue(error.toString(StandardCharsets.UTF_8).contains("Error: 输入路径不是文件:"));
+            assertTrue(exitCode == 1);
+        } finally {
+            Files.deleteIfExists(directory);
+        }
     }
 
     private String captureStdout(Runnable action) {
@@ -102,5 +137,19 @@ class SmartDocFlowCliApplicationTest {
             System.setOut(originalOut);
         }
         return outputStream.toString(StandardCharsets.UTF_8);
+    }
+
+    private int captureStderr(ByteArrayOutputStream outputStream, java.util.concurrent.Callable<Integer> action) {
+        PrintStream originalErr = System.err;
+        try (PrintStream capture = new PrintStream(outputStream, true, StandardCharsets.UTF_8)) {
+            System.setErr(capture);
+            try {
+                return action.call();
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        } finally {
+            System.setErr(originalErr);
+        }
     }
 }

@@ -45,9 +45,19 @@ class PipelineDiagnosticsTest {
 
         assertTrue(hasDiagnostic(ir, "PIPELINE", "sourceType"));
         assertTrue(hasDiagnostic(ir, "PIPELINE", "scanned"));
+        assertTrue(hasDiagnostic(ir, "PIPELINE", "tableHeavy"));
+        assertTrue(hasDiagnostic(ir, "PIPELINE", "imageHeavy"));
+        assertTrue(hasDiagnostic(ir, "PIPELINE", "multiColumn"));
+        assertTrue(hasDiagnostic(ir, "EXTRACT", "started"));
+        assertTrue(hasDiagnostic(ir, "EXTRACT", "startedAt"));
         assertTrue(hasDiagnostic(ir, "EXTRACT", "beforeNodes"));
         assertTrue(hasDiagnostic(ir, "EXTRACT", "afterNodes"));
+        assertTrue(hasDiagnostic(ir, "EXTRACT", "completed"));
+        assertTrue(hasDiagnostic(ir, "EXTRACT", "durationMs"));
+        assertTrue(hasDiagnostic(ir, "EXTRACT", "nodeDelta"));
         assertTrue(hasDiagnostic(ir, "OCR", "beforeNodes"));
+        assertTrue(hasDiagnostic(ir, "OCR", "completed"));
+        assertTrue(hasDiagnostic(ir, "OCR", "durationMs"));
         assertTrue(hasDiagnostic(ir, "POST", "afterNodes"));
     }
 

@@ -2,6 +2,7 @@ package io.ycy.smartdocflow.layout;
 
 import io.ycy.smartdocflow.common.model.Bbox;
 import io.ycy.smartdocflow.core.model.ir.Container;
+import io.ycy.smartdocflow.core.model.ir.Diagnostic;
 import io.ycy.smartdocflow.core.model.ir.DocumentIr;
 import io.ycy.smartdocflow.core.model.ir.Node;
 import io.ycy.smartdocflow.core.model.ir.NodeType;
@@ -18,6 +19,7 @@ public final class BasicRepairer implements StructureRepairer {
     @Override
     public void repair(DocumentIr ir) {
         if (ir.getNodes().isEmpty() && ir.getContainers().isEmpty()) {
+            ir.addDiagnostic(new Diagnostic("REPAIR", "reason", "no-input-content", System.currentTimeMillis()));
             return;
         }
 
@@ -25,14 +27,19 @@ public final class BasicRepairer implements StructureRepairer {
         List<Node> currentParagraph = new ArrayList<>();
         String currentContainerId = null;
         int order = 0;
+        int mergedParagraphs = 0;
+        int skippedStructuralNodes = 0;
+        ir.addDiagnostic(new Diagnostic("REPAIR", "strategy", "merge-adjacent-paragraphs-and-drop-page-artifacts", System.currentTimeMillis()));
 
         for (Node node : ir.getNodes()) {
             if (node.nodeType() == NodeType.HEADER || node.nodeType() == NodeType.FOOTER || node.nodeType() == NodeType.PAGE_NUMBER) {
+                skippedStructuralNodes++;
                 continue;
             }
 
             if (node.containerId() != null && !node.containerId().equals(currentContainerId)) {
                 if (!currentParagraph.isEmpty()) {
+                    mergedParagraphs += currentParagraph.size() > 1 ? 1 : 0;
                     repaired.add(joinParagraph(currentParagraph, order++, currentContainerId));
                     currentParagraph.clear();
                 }
@@ -41,6 +48,7 @@ public final class BasicRepairer implements StructureRepairer {
 
             if (node.nodeType() == NodeType.HEADING || node.nodeType() == NodeType.TITLE) {
                 if (!currentParagraph.isEmpty()) {
+                    mergedParagraphs += currentParagraph.size() > 1 ? 1 : 0;
                     repaired.add(joinParagraph(currentParagraph, order++, currentContainerId));
                     currentParagraph.clear();
                 }
@@ -50,6 +58,7 @@ public final class BasicRepairer implements StructureRepairer {
 
             if (node.nodeType() == NodeType.TABLE || node.nodeType() == NodeType.FIGURE || node.nodeType() == NodeType.FORMULA || node.nodeType() == NodeType.CODE_BLOCK) {
                 if (!currentParagraph.isEmpty()) {
+                    mergedParagraphs += currentParagraph.size() > 1 ? 1 : 0;
                     repaired.add(joinParagraph(currentParagraph, order++, currentContainerId));
                     currentParagraph.clear();
                 }
@@ -61,11 +70,15 @@ public final class BasicRepairer implements StructureRepairer {
         }
 
         if (!currentParagraph.isEmpty()) {
+            mergedParagraphs += currentParagraph.size() > 1 ? 1 : 0;
             repaired.add(joinParagraph(currentParagraph, order, currentContainerId));
         }
 
         ir.getNodes().clear();
         repaired.forEach(ir::addNode);
+        ir.addDiagnostic(new Diagnostic("REPAIR", "mergedParagraphs", mergedParagraphs, System.currentTimeMillis()));
+        ir.addDiagnostic(new Diagnostic("REPAIR", "skippedStructuralNodes", skippedStructuralNodes, System.currentTimeMillis()));
+        ir.addDiagnostic(new Diagnostic("REPAIR", "reason", mergedParagraphs == 0 && skippedStructuralNodes == 0 ? "no-repair-needed" : "repair-applied", System.currentTimeMillis()));
     }
 
     private Node joinParagraph(List<Node> parts, int order, String containerId) {

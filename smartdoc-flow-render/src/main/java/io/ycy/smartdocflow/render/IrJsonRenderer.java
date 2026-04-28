@@ -18,23 +18,19 @@ public final class IrJsonRenderer implements ResultRenderer {
             .collect(Collectors.joining(","));
 
         return "{" +
-            "\"documentId\":\"" + escape(result.metadata().documentId()) + "\"," +
-            "\"fileName\":\"" + escape(result.metadata().fileName()) + "\"," +
+            "\"documentId\":\"" + RenderSupport.escapeJson(result.metadata().documentId()) + "\"," +
+            "\"fileName\":\"" + RenderSupport.escapeJson(result.metadata().fileName()) + "\"," +
             "\"blocks\":[" + blocks + "]" +
             "}";
     }
 
     private String toJson(DocumentBlock block) {
         return "{" +
-            "\"id\":\"" + escape(block.id()) + "\"," +
+            "\"id\":\"" + RenderSupport.escapeJson(block.id()) + "\"," +
             "\"type\":\"" + block.type().name() + "\"," +
             "\"page\":" + block.page() + "," +
             "\"order\":" + block.order() + "," +
-            "\"text\":\"" + escape(block.text()) + "\"" +
+            "\"text\":\"" + RenderSupport.escapeJson(block.text()) + "\"" +
             "}";
-    }
-
-    private String escape(String value) {
-        return value.replace("\\", "\\\\").replace("\"", "\\\"");
     }
 }

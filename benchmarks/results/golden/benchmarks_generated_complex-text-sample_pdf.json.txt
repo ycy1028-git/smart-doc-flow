@@ -1,0 +1,1 @@
+{"documentId":"<doc-id>","fileName":"complex-text-sample.pdf","blocks":[{"id":"<node-id>","type":"PARAGRAPH","page":0,"order":0,"text":"Quarterly Review\nRevenue grew by 20%.\nMargin stayed above 35%."},{"id":"<node-id>","type":"PARAGRAPH","page":1,"order":1,"text":"Operational Risks\nSupplier delay risk remains medium.\nMitigation plan is active."}]}

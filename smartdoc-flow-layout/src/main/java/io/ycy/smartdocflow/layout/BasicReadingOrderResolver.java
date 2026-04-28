@@ -16,6 +16,7 @@ public final class BasicReadingOrderResolver implements ReadingOrderResolver {
     public void resolve(DocumentIr ir) {
         Map<String, Integer> containerOrder = ir.getContainers().stream()
             .collect(Collectors.toMap(Container::id, Container::index, (left, right) -> left));
+        ir.addDiagnostic(new Diagnostic("ORDER", "strategy", "container-index-then-order-key", System.currentTimeMillis()));
 
         var ordered = new ArrayList<>(ir.getNodes());
         ordered.sort(
@@ -41,6 +42,7 @@ public final class BasicReadingOrderResolver implements ReadingOrderResolver {
             ));
         }
         ir.addDiagnostic(new Diagnostic("ORDER", "orderedNodes", ordered.size(), System.currentTimeMillis()));
+        ir.addDiagnostic(new Diagnostic("ORDER", "reason", ordered.isEmpty() ? "no-nodes-to-order" : "stable-order-applied", System.currentTimeMillis()));
     }
 
     private java.util.List<Integer> parseOrderKey(Node node) {

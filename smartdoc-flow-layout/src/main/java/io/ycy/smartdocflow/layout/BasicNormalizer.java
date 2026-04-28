@@ -13,6 +13,7 @@ public final class BasicNormalizer implements Normalizer {
     public void normalize(DocumentIr ir) {
         var oldNodes = new ArrayList<>(ir.getNodes());
         ir.getNodes().clear();
+        ir.addDiagnostic(new Diagnostic("NORMALIZE", "strategy", "line-break-and-whitespace-normalization", System.currentTimeMillis()));
 
         for (Node node : oldNodes) {
             String normalizedText = normalizeText(node.text(), node.nodeType());
@@ -31,6 +32,7 @@ public final class BasicNormalizer implements Normalizer {
             ));
         }
         ir.addDiagnostic(new Diagnostic("NORMALIZE", "normalizedNodes", oldNodes.size(), System.currentTimeMillis()));
+        ir.addDiagnostic(new Diagnostic("NORMALIZE", "reason", oldNodes.isEmpty() ? "no-input-nodes" : "normalize-all-nodes", System.currentTimeMillis()));
     }
 
     private String normalizeText(String text, NodeType nodeType) {

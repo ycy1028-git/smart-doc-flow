@@ -1,0 +1,1 @@
+{"documentId":"<doc-id>","fileName":"broken.pptx","blocks":[]}

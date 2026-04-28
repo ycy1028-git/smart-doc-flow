@@ -1,0 +1,1 @@
+{"documentId":"<doc-id>","fileName":"sample.docx","blocks":[{"id":"<node-id>","type":"TITLE","page":0,"order":0,"text":"Project Overview"},{"id":"<node-id>","type":"PARAGRAPH","page":0,"order":1,"text":"This document summarizes the current implementation status."},{"id":"<node-id>","type":"TABLE","page":0,"order":2,"text":"Metric | Value\nCoverage | Baseline"}]}

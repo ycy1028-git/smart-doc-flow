@@ -1,5 +1,6 @@
 package io.ycy.smartdocflow.layout;
 
+import io.ycy.smartdocflow.core.model.ir.Diagnostic;
 import io.ycy.smartdocflow.core.model.ir.DocumentIr;
 import io.ycy.smartdocflow.core.model.ir.Node;
 import io.ycy.smartdocflow.core.model.ir.NodeType;
@@ -14,11 +15,19 @@ public final class BasicClassifier implements BlockClassifier {
     public void classify(DocumentIr ir) {
         var oldNodes = new ArrayList<>(ir.getNodes());
         ir.getNodes().clear();
+        int headingCandidates = 0;
+        int tableCandidates = 0;
+        ir.addDiagnostic(new Diagnostic("CLASSIFY", "strategy", "heading-and-table-heuristics", System.currentTimeMillis()));
 
         for (Node node : oldNodes) {
             NodeType classifiedType = node.nodeType();
             if (node.nodeType() == NodeType.PARAGRAPH) {
                 classifiedType = classifyText(node.text());
+                if (classifiedType == NodeType.HEADING) {
+                    headingCandidates++;
+                } else if (classifiedType == NodeType.TABLE) {
+                    tableCandidates++;
+                }
             }
             ir.addNode(new Node(
                 node.id(),
@@ -34,6 +43,9 @@ public final class BasicClassifier implements BlockClassifier {
                 mergeTag(node.stageTags(), "CLASSIFY")
             ));
         }
+        ir.addDiagnostic(new Diagnostic("CLASSIFY", "headingCandidates", headingCandidates, System.currentTimeMillis()));
+        ir.addDiagnostic(new Diagnostic("CLASSIFY", "tableCandidates", tableCandidates, System.currentTimeMillis()));
+        ir.addDiagnostic(new Diagnostic("CLASSIFY", "reason", headingCandidates == 0 && tableCandidates == 0 ? "no-reclassification-needed" : "heuristics-reclassified-paragraphs", System.currentTimeMillis()));
     }
 
     private NodeType classifyText(String text) {

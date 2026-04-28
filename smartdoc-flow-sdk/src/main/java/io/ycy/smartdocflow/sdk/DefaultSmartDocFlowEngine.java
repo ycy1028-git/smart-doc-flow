@@ -21,6 +21,7 @@ import io.ycy.smartdocflow.layout.BasicSegmenter;
 import io.ycy.smartdocflow.layout.BasicTableRecoverer;
 import io.ycy.smartdocflow.layout.NoopPostProcessor;
 import io.ycy.smartdocflow.ocr.BasicOcrProvider;
+import io.ycy.smartdocflow.ocr.CompositeOcrProvider;
 import io.ycy.smartdocflow.render.IrJsonRenderer;
 import io.ycy.smartdocflow.render.IrMarkdownRenderer;
 import io.ycy.smartdocflow.core.spi.FormatExtractionResult;
@@ -29,6 +30,8 @@ import io.ycy.smartdocflow.common.model.DocumentSourceType;
 import java.nio.file.Path;
 
 public final class DefaultSmartDocFlowEngine implements SmartDocFlowEngine {
+    // IR + Pipeline is the only long-term execution path.
+    // The legacy FormatExtractionResult path remains only as extractor compatibility surface.
     private final Pipeline pipeline;
     private final IrMarkdownRenderer markdownRenderer;
     private final IrJsonRenderer jsonRenderer;
@@ -79,7 +82,7 @@ public final class DefaultSmartDocFlowEngine implements SmartDocFlowEngine {
         return new PipelineBuilder()
             .detector(detector)
             .extractor(extractor)
-            .ocrProvider(new BasicOcrProvider())
+            .ocrProvider(CompositeOcrProvider.basic())
             .normalizer(new BasicNormalizer())
             .segmenter(new BasicSegmenter())
             .orderResolver(new BasicReadingOrderResolver())

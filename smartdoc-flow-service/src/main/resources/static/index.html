@@ -3,6 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="/logo.png" sizes="any">
+  <link rel="icon" type="image/png" href="/logo.png">
   <title>SmartDoc-Flow | OSS Demo</title>
   <style>
     :root {
@@ -1109,16 +1111,36 @@
       }).join('');
     }
 
+    function getDiagnosticValue(diagnostics, stage, key) {
+      const item = Array.isArray(diagnostics)
+        ? diagnostics.find(entry => entry.stage === stage && entry.key === key)
+        : null;
+      return item ? item.value : null;
+    }
+
     function buildHint(result) {
       const diagnostics = Array.isArray(result?.diagnostics) ? result.diagnostics : [];
-      const tesseractMissing = diagnostics.find(item => item.stage === 'OCR' && item.key === 'backend' && item.value === 'tesseract-not-found');
-      if (tesseractMissing) {
+      const ocrDecision = getDiagnosticValue(diagnostics, 'OCR', 'decision');
+      const ocrBackend = getDiagnosticValue(diagnostics, 'OCR', 'backend');
+      const ocrLang = getDiagnosticValue(diagnostics, 'OCR', 'lang');
+      const ocrStrategy = getDiagnosticValue(diagnostics, 'OCR', 'strategy');
+      const ocrResult = getDiagnosticValue(diagnostics, 'OCR', 'result');
+      const ocrFallback = getDiagnosticValue(diagnostics, 'OCR', 'fallback');
+
+      if (ocrBackend === 'tesseract-not-found') {
         return '当前环境未检测到 tesseract，图片或扫描 PDF 会降级为基础路径。若要验证真实 OCR 文本，请先安装 tesseract，再重新上传同一文件查看 diagnostics 列表。';
       }
 
-      const ocrResult = diagnostics.find(item => item.stage === 'OCR' && item.key === 'result');
-      if (ocrResult) {
-        return '当前文件已经命中 OCR 路径。建议重点查看 diagnostics 列表中的 OCR、NORMALIZE、POST 相关项，确认识别结果是否满足后续接入预期。';
+      if (ocrDecision === 'run-ocr' && ocrResult === 'empty-image-ocr') {
+        return `当前文件已经命中 OCR 路径，并使用 ${ocrLang || '默认语言'} 执行识别，但 OCR 返回空结果。通常是图片清晰度、字号、对比度或语言包不匹配导致。建议重点查看 OCR.lang=${ocrLang || '-'}、OCR.strategy=${ocrStrategy || '-'}、OCR.fallback=${ocrFallback || '-'}。`;
+      }
+
+      if (ocrDecision === 'run-ocr' && ocrFallback === 'empty-page-ocr-result') {
+        return `当前文件已经命中 OCR 路径，并使用 ${ocrLang || '默认语言'} 执行识别，但至少有页面 OCR 返回空结果。建议重点查看 OCR.lang=${ocrLang || '-'}、OCR.strategy=${ocrStrategy || '-'} 以及 page-* diagnostics。`;
+      }
+
+      if (ocrDecision === 'run-ocr' && ocrResult) {
+        return `当前文件已经命中 OCR 路径，且 OCR 已产出结果。当前语言=${ocrLang || '-'}，策略=${ocrStrategy || '-'}。建议继续查看 NORMALIZE、POST 和最终 Markdown/JSON，确认识别质量是否满足预期。`;
       }
 
       const extractStage = diagnostics.find(item => item.stage === 'EXTRACT' && item.key === 'afterNodes');

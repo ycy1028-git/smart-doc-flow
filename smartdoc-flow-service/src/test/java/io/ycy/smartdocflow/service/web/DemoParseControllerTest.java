@@ -47,7 +47,11 @@ class DemoParseControllerTest {
             .andExpect(jsonPath("$.markdown").isString())
             .andExpect(jsonPath("$.json").isString())
             .andExpect(jsonPath("$.diagnostics").isArray())
-            .andExpect(jsonPath("$.diagnostics[0].stage").value("PIPELINE"));
+            .andExpect(jsonPath("$.diagnostics[0].stage").value("PIPELINE"))
+            .andExpect(jsonPath("$.diagnostics[?(@.stage == 'PIPELINE' && @.key == 'multiColumn')]").isNotEmpty())
+            .andExpect(jsonPath("$.diagnostics[?(@.stage == 'EXTRACT' && @.key == 'started')]").isNotEmpty())
+            .andExpect(jsonPath("$.diagnostics[?(@.stage == 'EXTRACT' && @.key == 'durationMs')]").isNotEmpty())
+            .andExpect(jsonPath("$.diagnostics[?(@.stage == 'EXTRACT' && @.key == 'nodeDelta')]").isNotEmpty());
     }
 
     @Test
@@ -129,6 +133,82 @@ class DemoParseControllerTest {
         mockMvc.perform(multipart("/api/demo/parse").file(file))
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.message").value("上传文件不能为空"));
+    }
+
+    @Test
+    void returnsDiagnosticsForCorruptPdfUpload() throws Exception {
+        MockMultipartFile file = new MockMultipartFile(
+            "file",
+            "broken.pdf",
+            MediaType.APPLICATION_PDF_VALUE,
+            "not-a-real-pdf".getBytes()
+        );
+
+        mockMvc.perform(multipart("/api/demo/parse").file(file))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.fileName").value("broken.pdf"))
+            .andExpect(jsonPath("$.sourceType").value("PDF"))
+            .andExpect(jsonPath("$.markdown").value(org.hamcrest.Matchers.containsString("# ")))
+            .andExpect(jsonPath("$.json").value(org.hamcrest.Matchers.containsString("\"blocks\":[]")))
+            .andExpect(jsonPath("$.diagnostics[?(@.stage == 'EXTRACT' && @.key == 'fallback' && @.value == 'pdf-extract-failed')]").isNotEmpty())
+            .andExpect(jsonPath("$.diagnostics[?(@.stage == 'EXTRACT' && @.key == 'error')]").isNotEmpty());
+    }
+
+    @Test
+    void returnsDiagnosticsForCorruptDocxUpload() throws Exception {
+        MockMultipartFile file = new MockMultipartFile(
+            "file",
+            "broken.docx",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            "not-a-real-docx".getBytes()
+        );
+
+        mockMvc.perform(multipart("/api/demo/parse").file(file))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.fileName").value("broken.docx"))
+            .andExpect(jsonPath("$.sourceType").value("DOCX"))
+            .andExpect(jsonPath("$.markdown").value(org.hamcrest.Matchers.containsString("# ")))
+            .andExpect(jsonPath("$.json").value(org.hamcrest.Matchers.containsString("\"blocks\":[]")))
+            .andExpect(jsonPath("$.diagnostics[?(@.stage == 'EXTRACT' && @.key == 'fallback' && @.value == 'docx-extract-failed')]").isNotEmpty())
+            .andExpect(jsonPath("$.diagnostics[?(@.stage == 'EXTRACT' && @.key == 'error')]").isNotEmpty());
+    }
+
+    @Test
+    void returnsDiagnosticsForCorruptXlsxUpload() throws Exception {
+        MockMultipartFile file = new MockMultipartFile(
+            "file",
+            "broken.xlsx",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "not-a-real-xlsx".getBytes()
+        );
+
+        mockMvc.perform(multipart("/api/demo/parse").file(file))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.fileName").value("broken.xlsx"))
+            .andExpect(jsonPath("$.sourceType").value("XLSX"))
+            .andExpect(jsonPath("$.markdown").value(org.hamcrest.Matchers.containsString("# ")))
+            .andExpect(jsonPath("$.json").value(org.hamcrest.Matchers.containsString("\"blocks\":[]")))
+            .andExpect(jsonPath("$.diagnostics[?(@.stage == 'EXTRACT' && @.key == 'fallback' && @.value == 'xlsx-extract-failed')]").isNotEmpty())
+            .andExpect(jsonPath("$.diagnostics[?(@.stage == 'EXTRACT' && @.key == 'error')]").isNotEmpty());
+    }
+
+    @Test
+    void returnsDiagnosticsForCorruptPptxUpload() throws Exception {
+        MockMultipartFile file = new MockMultipartFile(
+            "file",
+            "broken.pptx",
+            "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+            "not-a-real-pptx".getBytes()
+        );
+
+        mockMvc.perform(multipart("/api/demo/parse").file(file))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.fileName").value("broken.pptx"))
+            .andExpect(jsonPath("$.sourceType").value("PPTX"))
+            .andExpect(jsonPath("$.markdown").value(org.hamcrest.Matchers.containsString("# ")))
+            .andExpect(jsonPath("$.json").value(org.hamcrest.Matchers.containsString("\"blocks\":[]")))
+            .andExpect(jsonPath("$.diagnostics[?(@.stage == 'EXTRACT' && @.key == 'fallback' && @.value == 'pptx-extract-failed')]").isNotEmpty())
+            .andExpect(jsonPath("$.diagnostics[?(@.stage == 'EXTRACT' && @.key == 'error')]").isNotEmpty());
     }
 
     private byte[] createTextPdfBytes() throws IOException {

@@ -1,0 +1,5 @@
+sourceType: IMAGE
+scanned: true
+multiColumn: false
+tableHeavy: false
+imageHeavy: true

@@ -82,42 +82,19 @@ public class Pipeline {
 
         addDiagnostic(ir, "PIPELINE", "sourceType", profile.sourceType().name());
         addDiagnostic(ir, "PIPELINE", "scanned", profile.scanned());
+        addDiagnostic(ir, "PIPELINE", "tableHeavy", profile.tableHeavy());
+        addDiagnostic(ir, "PIPELINE", "imageHeavy", profile.imageHeavy());
+        addDiagnostic(ir, "PIPELINE", "multiColumn", profile.multiColumn());
 
-        recordStageStart(ir, "EXTRACT");
-        extractor.extract(source, profile, ir);
-        recordStageEnd(ir, "EXTRACT");
-
-        recordStageStart(ir, "OCR");
-        ocrProvider.process(source, ir, profile);
-        recordStageEnd(ir, "OCR");
-
-        recordStageStart(ir, "NORMALIZE");
-        normalizer.normalize(ir);
-        recordStageEnd(ir, "NORMALIZE");
-
-        recordStageStart(ir, "SEGMENT");
-        segmenter.segment(ir);
-        recordStageEnd(ir, "SEGMENT");
-
-        recordStageStart(ir, "ORDER");
-        orderResolver.resolve(ir);
-        recordStageEnd(ir, "ORDER");
-
-        recordStageStart(ir, "CLASSIFY");
-        classifier.classify(ir);
-        recordStageEnd(ir, "CLASSIFY");
-
-        recordStageStart(ir, "TABLE_RECOVER");
-        tableRecoverer.recover(ir);
-        recordStageEnd(ir, "TABLE_RECOVER");
-
-        recordStageStart(ir, "REPAIR");
-        repairer.repair(ir);
-        recordStageEnd(ir, "REPAIR");
-
-        recordStageStart(ir, "POST");
-        postProcessor.process(ir);
-        recordStageEnd(ir, "POST");
+        runStage(ir, "EXTRACT", () -> extractor.extract(source, profile, ir));
+        runStage(ir, "OCR", () -> ocrProvider.process(source, ir, profile));
+        runStage(ir, "NORMALIZE", () -> normalizer.normalize(ir));
+        runStage(ir, "SEGMENT", () -> segmenter.segment(ir));
+        runStage(ir, "ORDER", () -> orderResolver.resolve(ir));
+        runStage(ir, "CLASSIFY", () -> classifier.classify(ir));
+        runStage(ir, "TABLE_RECOVER", () -> tableRecoverer.recover(ir));
+        runStage(ir, "REPAIR", () -> repairer.repair(ir));
+        runStage(ir, "POST", () -> postProcessor.process(ir));
 
         return ir;
     }
@@ -126,12 +103,36 @@ public class Pipeline {
         return renderer.render(ir, options);
     }
 
+    private void runStage(DocumentIr ir, String stage, Runnable action) {
+        long startedAt = System.currentTimeMillis();
+        int beforeNodes = ir.getNodes().size();
+        recordStageStart(ir, stage, startedAt, beforeNodes);
+        try {
+            action.run();
+            recordStageEnd(ir, stage, startedAt, beforeNodes);
+        } catch (RuntimeException e) {
+            addDiagnostic(ir, stage, "failed", true);
+            addDiagnostic(ir, stage, "error", e.getMessage() == null ? e.getClass().getSimpleName() : e.getClass().getSimpleName() + ": " + e.getMessage());
+            recordStageEnd(ir, stage, startedAt, beforeNodes);
+            throw e;
+        }
+    }
+
+    private void recordStageStart(DocumentIr ir, String stage, long startedAt, int beforeNodes) {
+        addDiagnostic(ir, stage, "started", true);
+        addDiagnostic(ir, stage, "startedAt", startedAt);
+        addDiagnostic(ir, stage, "beforeNodes", beforeNodes);
+    }
+
     private void recordStageStart(DocumentIr ir, String stage) {
         addDiagnostic(ir, stage, "beforeNodes", ir.getNodes().size());
     }
 
-    private void recordStageEnd(DocumentIr ir, String stage) {
+    private void recordStageEnd(DocumentIr ir, String stage, long startedAt, int beforeNodes) {
+        addDiagnostic(ir, stage, "completed", true);
+        addDiagnostic(ir, stage, "durationMs", Math.max(0, System.currentTimeMillis() - startedAt));
         addDiagnostic(ir, stage, "afterNodes", ir.getNodes().size());
+        addDiagnostic(ir, stage, "nodeDelta", ir.getNodes().size() - beforeNodes);
     }
 
     private void addDiagnostic(DocumentIr ir, String stage, String key, Object value) {

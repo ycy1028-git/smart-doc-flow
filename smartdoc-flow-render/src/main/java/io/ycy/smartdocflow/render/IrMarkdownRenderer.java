@@ -22,13 +22,13 @@ public final class IrMarkdownRenderer implements ResultRenderer {
 
     private void appendBlock(StringBuilder builder, DocumentBlock block) {
         if (block.type() == BlockType.HEADING || block.type() == BlockType.TITLE) {
-            builder.append("## ").append(block.text().replace('\n', ' ').trim());
+            builder.append("## ").append(RenderSupport.normalizeInlineText(block.text()));
         } else if (block.type() == BlockType.TABLE) {
             builder.append("```text").append(System.lineSeparator());
-            builder.append(block.text().trim()).append(System.lineSeparator());
+            builder.append(RenderSupport.normalizeBlockText(block.text())).append(System.lineSeparator());
             builder.append("```");
         } else {
-            builder.append(block.text().trim());
+            builder.append(RenderSupport.normalizeBlockText(block.text()));
         }
         builder.append(System.lineSeparator()).append(System.lineSeparator());
     }

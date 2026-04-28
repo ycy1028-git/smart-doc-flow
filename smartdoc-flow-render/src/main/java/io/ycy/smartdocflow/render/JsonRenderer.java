@@ -13,23 +13,19 @@ public final class JsonRenderer implements Renderer {
             .collect(Collectors.joining(","));
 
         return "{" +
-            "\"documentId\":\"" + escape(documentResult.metadata().documentId()) + "\"," +
-            "\"fileName\":\"" + escape(documentResult.metadata().fileName()) + "\"," +
+            "\"documentId\":\"" + RenderSupport.escapeJson(documentResult.metadata().documentId()) + "\"," +
+            "\"fileName\":\"" + RenderSupport.escapeJson(documentResult.metadata().fileName()) + "\"," +
             "\"blocks\":[" + blocks + "]" +
             "}";
     }
 
     private String toJson(DocumentBlock block) {
         return "{" +
-            "\"id\":\"" + escape(block.id()) + "\"," +
+            "\"id\":\"" + RenderSupport.escapeJson(block.id()) + "\"," +
             "\"type\":\"" + block.type().name() + "\"," +
             "\"page\":" + block.page() + "," +
             "\"order\":" + block.order() + "," +
-            "\"text\":\"" + escape(block.text()) + "\"" +
+            "\"text\":\"" + RenderSupport.escapeJson(block.text()) + "\"" +
             "}";
-    }
-
-    private String escape(String value) {
-        return value.replace("\\", "\\\\").replace("\"", "\\\"");
     }
 }

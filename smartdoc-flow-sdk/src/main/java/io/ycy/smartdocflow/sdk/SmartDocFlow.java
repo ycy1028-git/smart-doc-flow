@@ -5,8 +5,9 @@ import io.ycy.smartdocflow.core.model.DocumentResult;
 import io.ycy.smartdocflow.core.model.ParseOptions;
 import io.ycy.smartdocflow.core.model.ir.Diagnostic;
 import io.ycy.smartdocflow.core.model.ir.DocumentIr;
-import java.util.List;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 
 public final class SmartDocFlow {
     private final DefaultSmartDocFlowEngine engine;
@@ -16,14 +17,17 @@ public final class SmartDocFlow {
     }
 
     public DocumentProfile profile(Path source) {
+        validateSource(source);
         return engine.profile(source);
     }
 
     public DocumentResult parse(Path source) {
+        validateSource(source);
         return engine.parse(source, ParseOptions.markdown());
     }
 
     public DocumentIr parseToIr(Path source) {
+        validateSource(source);
         return engine.parseToIr(source);
     }
 
@@ -32,10 +36,24 @@ public final class SmartDocFlow {
     }
 
     public String parseToMarkdown(Path source) {
+        validateSource(source);
         return engine.render(source, ParseOptions.markdown());
     }
 
     public String parseToJson(Path source) {
+        validateSource(source);
         return engine.render(source, ParseOptions.json());
+    }
+
+    private static void validateSource(Path source) {
+        if (source == null) {
+            throw new IllegalArgumentException("输入文件不能为空");
+        }
+        if (!Files.exists(source)) {
+            throw new IllegalArgumentException("输入文件不存在: " + source);
+        }
+        if (!Files.isRegularFile(source)) {
+            throw new IllegalArgumentException("输入路径不是文件: " + source);
+        }
     }
 }

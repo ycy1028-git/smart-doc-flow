@@ -1,0 +1,1 @@
+{"documentId":"<doc-id>","fileName":"sample.pptx","blocks":[{"id":"<node-id>","type":"HEADING","page":0,"order":0,"text":"Quarterly Review"},{"id":"<node-id>","type":"HEADING","page":0,"order":1,"text":"Revenue grew by 20%"},{"id":"<node-id>","type":"TABLE","page":0,"order":2,"text":"Region | Revenue\nAPAC | 320"}]}

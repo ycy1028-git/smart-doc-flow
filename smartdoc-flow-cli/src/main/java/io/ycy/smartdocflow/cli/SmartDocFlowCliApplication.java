@@ -11,38 +11,48 @@ public final class SmartDocFlowCliApplication {
     }
 
     public static void main(String[] args) {
-        if (args.length < 3 || !"--input".equals(args[1])) {
-            printUsage();
-            return;
-        }
+        System.exit(run(args));
+    }
 
-        Path input = Path.of(args[2]);
-        Path outputFile = getOutputFile(args);
-        SmartDocFlow smartDocFlow = new SmartDocFlow();
+    static int run(String[] args) {
+        try {
+            if (args.length < 3 || !"--input".equals(args[1])) {
+                printUsage();
+                return 0;
+            }
 
-        if ("profile".equals(args[0])) {
-            printProfile(smartDocFlow, input);
-            return;
-        }
+            Path input = Path.of(args[2]);
+            Path outputFile = getOutputFile(args);
+            SmartDocFlow smartDocFlow = new SmartDocFlow();
 
-        if (!"parse".equals(args[0])) {
-            printUsage();
-            return;
-        }
+            if ("profile".equals(args[0])) {
+                printProfile(smartDocFlow, input);
+                return 0;
+            }
 
-        if (containsDiagnosticsFlag(args)) {
-            printDiagnostics(smartDocFlow, input);
-            return;
-        }
+            if (!"parse".equals(args[0])) {
+                printUsage();
+                return 0;
+            }
 
-        String output = containsJsonFlag(args)
-            ? smartDocFlow.parseToJson(input)
-            : smartDocFlow.parseToMarkdown(input);
+            if (containsDiagnosticsFlag(args)) {
+                printDiagnostics(smartDocFlow, input);
+                return 0;
+            }
 
-        if (outputFile != null) {
-            writeToFile(outputFile, output);
-        } else {
-            System.out.println(output);
+            String output = containsJsonFlag(args)
+                ? smartDocFlow.parseToJson(input)
+                : smartDocFlow.parseToMarkdown(input);
+
+            if (outputFile != null) {
+                writeToFile(outputFile, output);
+            } else {
+                System.out.println(output);
+            }
+            return 0;
+        } catch (IllegalArgumentException e) {
+            System.err.println("Error: " + e.getMessage());
+            return 1;
         }
     }
 

@@ -5,12 +5,15 @@ WORKDIR /app
 USER root
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends tesseract-ocr \
+    && apt-get install -y --no-install-recommends \
+       tesseract-ocr \
+       tesseract-ocr-chi-sim \
     && rm -rf /var/lib/apt/lists/*
 
 COPY smartdoc-flow-service/build/libs/*.jar app.jar
 
 ENV SMARTDOC_FLOW_TESSERACT_PATH=/usr/bin/tesseract
+ENV SMARTDOC_FLOW_OCR_LANG=chi_sim+eng
 
 EXPOSE 8080
 

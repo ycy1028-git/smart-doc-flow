@@ -1,0 +1,1 @@
+{"documentId":"<doc-id>","fileName":"sample.xlsx","blocks":[{"id":"<node-id>","type":"TABLE","page":0,"order":0,"text":"Summary\nMetric | Value\nCoverage | Baseline\nOwner | Core Team"}]}

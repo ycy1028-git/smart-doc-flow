@@ -14,6 +14,7 @@ public final class NoopPostProcessor implements PostProcessor {
         ir.getNodes().clear();
         int removedBlankNodes = 0;
         int removedDuplicateNodes = 0;
+        ir.addDiagnostic(new Diagnostic("POST", "strategy", "trim-drop-blank-dedupe-adjacent", System.currentTimeMillis()));
 
         Node previous = null;
         for (Node node : oldNodes) {
@@ -47,6 +48,7 @@ public final class NoopPostProcessor implements PostProcessor {
         }
         ir.addDiagnostic(new Diagnostic("POST", "removedBlankNodes", removedBlankNodes, System.currentTimeMillis()));
         ir.addDiagnostic(new Diagnostic("POST", "removedDuplicateNodes", removedDuplicateNodes, System.currentTimeMillis()));
+        ir.addDiagnostic(new Diagnostic("POST", "reason", removedBlankNodes == 0 && removedDuplicateNodes == 0 ? "no-post-cleanup-needed" : "cleanup-applied", System.currentTimeMillis()));
     }
 
     private boolean isAdjacentDuplicate(Node previous, Node current) {

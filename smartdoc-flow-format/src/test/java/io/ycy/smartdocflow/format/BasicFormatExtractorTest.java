@@ -18,10 +18,12 @@ import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import org.apache.poi.util.Units;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.apache.poi.xwpf.usermodel.XWPFDocument;
 import org.apache.poi.xwpf.usermodel.XWPFParagraph;
+import org.apache.poi.xwpf.usermodel.XWPFRun;
 import org.apache.poi.xwpf.usermodel.XWPFTable;
 import org.apache.poi.xslf.usermodel.XMLSlideShow;
 import org.apache.poi.xslf.usermodel.XSLFSlide;
@@ -60,6 +62,22 @@ class BasicFormatExtractorTest {
     }
 
     @Test
+    void returnsFailurePlaceholderForCorruptDocx() throws IOException {
+        Path docxFile = Files.createTempFile("smartdoc-flow-corrupt-", ".docx");
+        try {
+            Files.writeString(docxFile, "not-a-real-docx");
+            DocumentProfile profile = new DocumentProfile(DocumentSourceType.DOCX, false, false, false, false);
+
+            var result = officeExtractor.extract(docxFile, profile);
+
+            assertTrue(result.extractedText().contains("Failed to extract DOCX content from"));
+            assertEquals(1, result.pageCount());
+        } finally {
+            Files.deleteIfExists(docxFile);
+        }
+    }
+
+    @Test
     void extractsBasicXlsxContent() throws IOException {
         Path xlsxFile = createSampleXlsx();
         try {
@@ -72,6 +90,22 @@ class BasicFormatExtractorTest {
             assertTrue(result.extractedText().contains("Metric | Value"));
             assertTrue(result.extractedText().contains("Coverage | Baseline"));
             assertTrue(result.extractedText().contains("Owner | Core Team"));
+        } finally {
+            Files.deleteIfExists(xlsxFile);
+        }
+    }
+
+    @Test
+    void returnsFailurePlaceholderForCorruptXlsx() throws IOException {
+        Path xlsxFile = Files.createTempFile("smartdoc-flow-corrupt-", ".xlsx");
+        try {
+            Files.writeString(xlsxFile, "not-a-real-xlsx");
+            DocumentProfile profile = new DocumentProfile(DocumentSourceType.XLSX, false, false, false, false);
+
+            var result = officeExtractor.extract(xlsxFile, profile);
+
+            assertTrue(result.extractedText().contains("Failed to extract XLSX content from"));
+            assertEquals(1, result.pageCount());
         } finally {
             Files.deleteIfExists(xlsxFile);
         }
@@ -92,6 +126,9 @@ class BasicFormatExtractorTest {
             assertEquals(NodeType.TITLE, ir.getNodes().get(0).nodeType());
             assertEquals(NodeType.PARAGRAPH, ir.getNodes().get(1).nodeType());
             assertTrue(ir.getNodes().stream().anyMatch(node -> node.nodeType() == NodeType.TABLE && node.text().contains("Metric | Value")));
+            assertTrue(ir.getNodes().stream().allMatch(node -> node.properties().containsKey("nodeRole")));
+            assertTrue(ir.getNodes().stream().allMatch(node -> node.bbox().width() > 0 && node.bbox().height() > 0));
+            assertFalse(ir.getRelations().isEmpty());
         } finally {
             Files.deleteIfExists(docxFile);
         }
@@ -112,6 +149,9 @@ class BasicFormatExtractorTest {
             assertEquals(NodeType.TABLE, ir.getNodes().getFirst().nodeType());
             assertTrue(ir.getNodes().getFirst().text().contains("Summary"));
             assertTrue(ir.getNodes().getFirst().text().contains("Owner | Core Team"));
+            assertEquals("xlsx-sheet-table", ir.getNodes().getFirst().properties().get("nodeRole"));
+            assertTrue(ir.getNodes().getFirst().bbox().width() > 0);
+            assertFalse(ir.getRelations().isEmpty());
         } finally {
             Files.deleteIfExists(xlsxFile);
         }
@@ -131,6 +171,22 @@ class BasicFormatExtractorTest {
             assertTrue(result.extractedText().contains("Quarterly Review"));
             assertTrue(result.extractedText().contains("Revenue grew by 20%"));
             assertTrue(result.pageLines().getFirst().contains("Quarterly Review"));
+        } finally {
+            Files.deleteIfExists(pptxFile);
+        }
+    }
+
+    @Test
+    void returnsFailurePlaceholderForCorruptPptx() throws IOException {
+        Path pptxFile = Files.createTempFile("smartdoc-flow-corrupt-", ".pptx");
+        try {
+            Files.writeString(pptxFile, "not-a-real-pptx");
+            DocumentProfile profile = new DocumentProfile(DocumentSourceType.PPTX, false, false, false, false);
+
+            var result = extractor.extract(pptxFile, profile);
+
+            assertTrue(result.extractedText().contains("Failed to extract PPTX content from"));
+            assertEquals(1, result.pageCount());
         } finally {
             Files.deleteIfExists(pptxFile);
         }
@@ -184,6 +240,39 @@ class BasicFormatExtractorTest {
     }
 
     @Test
+    void extractsPptxImageAssetsIntoIr() throws IOException {
+        Path pptxFile = copyProvidedSamplePptx();
+        try {
+            DocumentProfile profile = new DocumentProfile(DocumentSourceType.PPTX, false, false, false, false);
+            DocumentIr ir = createIr(DocumentSourceType.PPTX, pptxFile);
+
+            officeExtractor.extract(pptxFile, profile, ir);
+
+            assertFalse(ir.getAssets().isEmpty());
+            assertTrue(ir.getAssets().stream().anyMatch(asset -> "image".equals(asset.assetType())));
+            assertTrue(ir.getRelations().stream().anyMatch(relation -> relation.relationType() == io.ycy.smartdocflow.core.model.ir.RelationType.REFERS_TO));
+        } finally {
+            Files.deleteIfExists(pptxFile);
+        }
+    }
+
+    @Test
+    void extractsDocxImageAssetsIntoIr() throws Exception {
+        Path docxFile = createSampleDocxWithImage();
+        try {
+            DocumentProfile profile = new DocumentProfile(DocumentSourceType.DOCX, false, false, false, false);
+            DocumentIr ir = createIr(DocumentSourceType.DOCX, docxFile);
+
+            officeExtractor.extract(docxFile, profile, ir);
+
+            assertTrue(ir.getAssets().stream().anyMatch(asset -> "image".equals(asset.assetType())));
+            assertTrue(ir.getDiagnostics().stream().anyMatch(diagnostic -> diagnostic.stage().equals("EXTRACT") && diagnostic.key().equals("assetCount")));
+        } finally {
+            Files.deleteIfExists(docxFile);
+        }
+    }
+
+    @Test
     void extractsPdfPagesAndLines() throws IOException {
         Path pdfFile = createMultiPagePdf();
         try {
@@ -206,6 +295,22 @@ class BasicFormatExtractorTest {
     }
 
     @Test
+    void returnsFailurePlaceholderForCorruptPdf() throws IOException {
+        Path pdfFile = Files.createTempFile("smartdoc-flow-corrupt-", ".pdf");
+        try {
+            Files.writeString(pdfFile, "not-a-real-pdf");
+            DocumentProfile profile = new DocumentProfile(DocumentSourceType.PDF, false, false, false, false);
+
+            var result = new BasicPdfExtractor().extract(pdfFile, profile);
+
+            assertTrue(result.extractedText().contains("Failed to extract PDF content from"));
+            assertEquals(1, result.pageCount());
+        } finally {
+            Files.deleteIfExists(pdfFile);
+        }
+    }
+
+    @Test
     void extractsPdfIntoIrWithOneContainerPerPage() throws IOException {
         Path pdfFile = createMultiPagePdf();
         try {
@@ -221,6 +326,13 @@ class BasicFormatExtractorTest {
             assertTrue(ir.getNodes().stream().anyMatch(node -> node.text().contains("PDF Page 1")));
             assertTrue(ir.getNodes().stream().anyMatch(node -> node.text().contains("PDF Page 2")));
             assertFalse(ir.getNodes().stream().anyMatch(node -> node.text().isBlank()));
+            assertTrue(ir.getNodes().stream().allMatch(node -> node.properties().containsKey("pageIndex")));
+            assertTrue(ir.getNodes().stream().allMatch(node -> node.bbox().width() > 0 && node.bbox().height() > 0));
+            assertFalse(ir.getRelations().isEmpty());
+            assertTrue(ir.getDiagnostics().stream().anyMatch(diagnostic -> diagnostic.stage().equals("EXTRACT") && diagnostic.key().equals("strategy")));
+            assertTrue(ir.getDiagnostics().stream().anyMatch(diagnostic -> diagnostic.stage().equals("EXTRACT") && diagnostic.key().equals("pageCount")));
+            assertTrue(ir.getDiagnostics().stream().anyMatch(diagnostic -> diagnostic.stage().equals("EXTRACT") && diagnostic.key().equals("extractedPages")));
+            assertTrue(ir.getDiagnostics().stream().anyMatch(diagnostic -> diagnostic.stage().equals("EXTRACT") && diagnostic.key().equals("reason")));
         } finally {
             Files.deleteIfExists(pdfFile);
         }
@@ -256,6 +368,25 @@ class BasicFormatExtractorTest {
             table.getRow(1).getCell(1).setText("Baseline");
 
             document.write(outputStream);
+        }
+        return file;
+    }
+
+    private Path createSampleDocxWithImage() throws Exception {
+        Path file = Files.createTempFile("smartdoc-flow-format-img-", ".docx");
+        Path image = createSampleImage();
+        try (XWPFDocument document = new XWPFDocument(); OutputStream outputStream = Files.newOutputStream(file); InputStream imageStream = Files.newInputStream(image)) {
+            XWPFParagraph title = document.createParagraph();
+            title.setStyle("Title");
+            title.createRun().setText("Project Overview");
+
+            XWPFParagraph imageParagraph = document.createParagraph();
+            XWPFRun run = imageParagraph.createRun();
+            run.addPicture(imageStream, XWPFDocument.PICTURE_TYPE_PNG, image.getFileName().toString(), Units.toEMU(120), Units.toEMU(60));
+
+            document.write(outputStream);
+        } finally {
+            Files.deleteIfExists(image);
         }
         return file;
     }

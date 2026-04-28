@@ -1,0 +1,5 @@
+sourceType: UNKNOWN
+scanned: false
+multiColumn: false
+tableHeavy: false
+imageHeavy: false

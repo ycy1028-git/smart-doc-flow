@@ -255,13 +255,17 @@ image: ghcr.io/ycy1028-git/smart-doc-flow:v0.2.0-ocr
 2. 解析完成后立即删除临时文件
 3. `Markdown` 和 `JSON` 直接通过接口返回，不默认落盘保存
 
-当前唯一和运行行为相关的可选环境变量是：
+当前和运行行为相关的可选环境变量是：
 
 ```text
 SMARTDOC_FLOW_TESSERACT_PATH
+SMARTDOC_FLOW_OCR_PROVIDER
 ```
 
 它的作用是指定 `tesseract` 可执行文件路径，用于图片和扫描 PDF 的 OCR。
+
+`SMARTDOC_FLOW_OCR_PROVIDER` 用于选择 OCR provider。当前支持：`auto`、`tesseract`、`noop`。
+其中 `auto` / `tesseract` 走当前基础 Tesseract provider，`noop` 用于显式关闭真实 OCR，只保留路由与降级诊断。
 
 例如：
 
@@ -578,6 +582,30 @@ curl -s -X POST http://localhost:8080/api/demo/parse \
 
 说明当前 Demo 所在环境没有检测到 `tesseract`，OCR 已降级。
 
+### 4. Benchmark 最小入口
+
+仓库当前还提供一个最小 benchmark 入口，用于后续持续补样本和做质量回归。
+
+先安装 CLI：
+
+```bash
+./gradlew :smartdoc-flow-cli:installDist
+```
+
+再执行：
+
+```bash
+./scripts/run-benchmark.sh
+```
+
+默认会读取：
+
+```text
+benchmarks/sample-manifest.txt
+```
+
+你可以把需要长期回归的样本路径按“项目相对路径”追加到这个清单中。
+
 ## 使用方式
 
 当前推荐两种主要使用方式：
@@ -586,6 +614,12 @@ curl -s -X POST http://localhost:8080/api/demo/parse \
 2. 用 Java SDK 嵌入现有 Java 系统
 
 `smartdoc-flow-service` 主要用于演示和轻量接口验证，不是重型平台入口。
+
+benchmark 最小入口当前会把 `profile`、`markdown`、`json`、`diagnostics` 结果落盘到 `benchmarks/results/current/`，并与 `benchmarks/results/golden/` 做基线对比。
+其中 benchmark 会先对 `json.documentId` 以及 `diagnostics` 中的易波动数字字段做归一化，避免无意义漂移。
+当前 benchmark 样本已覆盖：文本、`PDF`、扫描 `PDF`、图片、`DOCX`、`XLSX`、`PPTX`、`PPTX notes/image` 资源样本，以及对应的空白边界样本。
+其中 `ocr-sample.png` 与 `scanned-sample.pdf` 还会额外以 `SMARTDOC_FLOW_OCR_PROVIDER=noop` 跑一轮，用于锁定 OCR 降级行为。
+如需刷新 golden，可执行：`UPDATE_GOLDEN=1 ./scripts/run-benchmark.sh`
 
 Java SDK 的打包和接入说明见：`sdk-usage.md`
 

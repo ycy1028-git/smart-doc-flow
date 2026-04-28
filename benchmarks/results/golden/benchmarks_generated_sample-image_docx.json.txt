@@ -1,0 +1,1 @@
+{"documentId":"<doc-id>","fileName":"sample-image.docx","blocks":[{"id":"<node-id>","type":"TITLE","page":0,"order":0,"text":"Project Overview"}]}
